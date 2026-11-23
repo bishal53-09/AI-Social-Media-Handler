@@ -92,6 +92,7 @@ def run_command(
     timeout: float | None = 600,
     check: bool = True,
     cwd: Path | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> CommandResult:
     """Run an external program safely.
 
@@ -99,6 +100,7 @@ def run_command(
       cannot inject commands.
     * The executable must be found on PATH (or be an absolute path).
     * Output is captured and secrets are redacted from error messages.
+    * ``env`` entries are added to (not substituted for) the current environment.
     """
     if isinstance(args, str):  # pragma: no cover - defensive
         raise TypeError("run_command requires a sequence of arguments, not a string")
@@ -121,6 +123,8 @@ def run_command(
             cwd=cwd,
             check=False,
             shell=False,
+            stdin=subprocess.DEVNULL,
+            env={**os.environ, **env} if env else None,
         )
     except subprocess.TimeoutExpired as exc:
         raise ValidationFailedError(f"Command timed out after {timeout}s: {Path(argv[0]).name}") from exc

@@ -7,4 +7,6 @@
 - Secrets: `.env` (mode 600) or `CredentialVault` (0600, pluggable cipher; the default is **obfuscation, not
   encryption** — use an OS keyring cipher for real protection). Logs are redacted.
 - Frames to AI only with consent; originals are never modified; publishing requires approval by default.
+- `make dev` binds both servers to 127.0.0.1. The update check only runs `git fetch` and reads refs (no credential
+  prompts, no changes to the checkout); `make update` fast-forwards only and refuses when there are local changes.
 - `.gitignore` blocks `.env`, tokens, databases, logs and common media formats.

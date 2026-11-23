@@ -38,11 +38,31 @@ curl -fsSL https://raw.githubusercontent.com/bishal53-09/AI-Social-Media-Handler
 ## Run
 
 ```bash
-# backend (http://127.0.0.1:8000, docs at /docs)
-.venv/bin/python -m app.cli serve
-# frontend (http://localhost:3000)
-cd web && npm run dev
+make dev
 ```
+
+This starts the backend (http://127.0.0.1:8000, API docs at `/docs`) and the frontend together, both bound to
+localhost, and prints the dashboard URL to open once both are ready: **http://localhost:3000**. Press Ctrl+C to
+stop both. `make dev OPEN_BROWSER=1` also opens the dashboard for you; `BACKEND_PORT` and `FRONTEND_PORT` override
+the ports.
+
+To run them separately: `make dev-backend` (`.venv/bin/python -m app.cli serve`) and `make dev-frontend`
+(`cd web && npm run dev`).
+
+## Update
+
+```bash
+make update
+```
+
+Stop `make dev` first. `make update` fetches the remote, fast-forwards your branch (it never merges, rebases or
+resets), reinstalls Python and frontend dependencies and runs database migrations. It refuses to run if you have
+uncommitted changes to tracked files or local commits that would need a merge, and it never touches `.env`,
+`data/` or your projects. Start the app again with `make dev` afterwards.
+
+The dashboard shows a banner when a newer version is available, and **Settings → Updates** has a "Check now"
+button. The API checks with `git fetch` at most every 15 minutes and only reports; it never installs anything.
+Set `UPDATE_CHECK=false` in `.env` to stop it from contacting the remote.
 
 ## Create a project
 

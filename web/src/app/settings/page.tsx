@@ -1,14 +1,18 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
+import { useState } from "react";
 import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { UpdateInstructions } from "@/components/update-banner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { api, API_URL } from "@/lib/api";
+import type { UpdateStatus } from "@/types/api";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -25,6 +29,87 @@ const Yes = ({ ok }: { ok: boolean }) =>
   ) : (
     <X className="inline size-4 text-destructive" aria-label="no" />
   );
+
+function UpdatesCard() {
+  const initial = useApi(() => api.updateStatus(), []);
+  const [fresh, setFresh] = useState<UpdateStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const u = fresh ?? initial.data;
+
+  const checkNow = async () => {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      setFresh(await api.updateStatus(true));
+    } catch (e) {
+      setCheckError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Updates</CardTitle>
+        <CardDescription>
+          Compares this install with its git remote. Nothing is installed automatically.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!u ? (
+          initial.error ? (
+            <p className="text-xs text-destructive">{initial.error.message}</p>
+          ) : (
+            <Skeleton className="h-16" />
+          )
+        ) : (
+          <>
+            <dl>
+              <Row label="Status">
+                {!u.supported ? (
+                  <Badge variant="outline">not available</Badge>
+                ) : u.update_available ? (
+                  <Badge variant="warning">update available</Badge>
+                ) : u.upstream ? (
+                  <Badge variant="success">up to date</Badge>
+                ) : (
+                  <Badge variant="outline">no upstream</Badge>
+                )}
+              </Row>
+              {u.branch ? (
+                <Row label="Branch">
+                  <span className="font-mono">
+                    {u.branch}
+                    {u.upstream ? ` → ${u.upstream}` : ""}
+                  </span>
+                </Row>
+              ) : null}
+              <Row label="Installed version">
+                <span className="font-mono">{u.local_commit ?? "unknown"}</span>
+              </Row>
+              {u.remote_commit ? (
+                <Row label="Latest version">
+                  <span className="font-mono">{u.remote_commit}</span>
+                </Row>
+              ) : null}
+              <Row label="Checked">{new Date(u.checked_at).toLocaleString()}</Row>
+            </dl>
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              {u.update_available ? <UpdateInstructions status={u} /> : u.message}
+            </div>
+          </>
+        )}
+        {checkError ? <p className="mt-2 text-[11px] text-destructive">{checkError}</p> : null}
+        <Button variant="outline" size="sm" className="mt-3" onClick={checkNow} disabled={checking}>
+          <RefreshCw className={checking ? "animate-spin" : undefined} />
+          {checking ? "Checking…" : "Check now"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   const { data: s, error, reload } = useApi(() => api.settings(), []);
@@ -152,6 +237,7 @@ export default function SettingsPage() {
               ))}
             </CardContent>
           </Card>
+          <UpdatesCard />
           <Card>
             <CardHeader>
               <CardTitle>Export presets</CardTitle>

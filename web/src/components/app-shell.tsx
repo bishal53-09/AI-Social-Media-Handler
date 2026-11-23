@@ -20,6 +20,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UpdateBanner } from "@/components/update-banner";
 import { useApi } from "@/hooks/use-api";
 import { api, API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -146,7 +147,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 md:px-6">
+          <UpdateBanner />
+          {children}
+        </main>
       </div>
     </div>
   );
