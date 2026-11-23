@@ -12,3 +12,4 @@ abstraction with Anthropic provider, FastAPI API, CLI, Next.js dashboard, CI.
   (phone, camera, drone, screen recording, finished edit). More video extensions are scanned by default, proxies cap the
   shorter side so vertical video keeps its quality, a 2:1 video is treated as 360 only with spherical metadata or when
   placed in `media/stitched/`, and the default camera applies to every source. 360 handling stays an optional workflow.
+- Docs: test entry to verify `make update` and the in-app update banner end to end.
