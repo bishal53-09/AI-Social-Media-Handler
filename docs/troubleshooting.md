@@ -7,4 +7,4 @@
 - **`.osv` files skipped:** stitch in DJI Studio and place exports in `media/stitched/`.
 - **Job stuck "running" after a crash:** restart the API; interrupted jobs are marked failed on startup.
 - **AI says frames not allowed:** set `media_transmission.allow_frames: true` in `config/ai.yaml` or use `--allow-frames`.
-- **Database errors:** `data/app.db` can be deleted safely; it is rebuilt (project JSON is the source of truth, then re-run `scan`).
+- **Database errors:** back up `data/app.db` first (it holds jobs and post tracking), then re-run `python -m app.cli doctor`; deleting it loses job history and post records, but projects can be re-registered with `scan`.
