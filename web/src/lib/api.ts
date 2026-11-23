@@ -21,6 +21,7 @@ import type {
   ProjectList,
   ScanResult,
   SyncReport,
+  UpdateStatus,
 } from "@/types/api";
 
 /**
@@ -91,6 +92,8 @@ const post = <T>(path: string, body?: unknown) =>
 export const api = {
   health: () => request<Health>("/health"),
   settings: () => request<AppSettings>("/settings"),
+  updateStatus: (refresh = false) =>
+    request<UpdateStatus>(`/system/update${refresh ? "?refresh=true" : ""}`),
   projects: {
     list: () => request<ProjectList>("/projects"),
     get: (id: string) => request<ProjectDetail>(`/projects/${encodeURIComponent(id)}`),

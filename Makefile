@@ -1,9 +1,19 @@
-.PHONY: install dev-backend dev-frontend test lint typecheck format check doctor
+.PHONY: install dev update dev-backend dev-frontend test lint typecheck format check doctor
 
 PY ?= .venv/bin/python
 
 install:
 	bash setup.sh
+
+# Backend + frontend together; prints the dashboard URL. Ctrl+C stops both.
+# Options: make dev OPEN_BROWSER=1  BACKEND_PORT=8000  FRONTEND_PORT=3000
+dev:
+	bash scripts/dev.sh
+
+# Fast-forward to the latest upstream commit, reinstall dependencies, run migrations.
+# Refuses if you have uncommitted changes. Stop `make dev` first.
+update:
+	bash scripts/update.sh
 
 dev-backend:
 	$(PY) -m app.cli serve

@@ -11,5 +11,15 @@ The script checks prerequisites, clones (or reuses) the checkout, creates `.venv
 dependencies, creates `.env` (mode 600) only if absent, runs migrations and validates configuration. It never runs
 `git pull` or overwrites local changes. Override with `INSTALL_DIR`, `REPO_URL`, `BRANCH`.
 
-Start: `.venv/bin/python -m app.cli serve` and `cd web && npm run dev`. Verify with `python -m app.cli doctor`.
+Start both servers with `make dev` and open the URL it prints (http://localhost:3000); Ctrl+C stops both. You can
+still start them separately with `.venv/bin/python -m app.cli serve` and `cd web && npm run dev`. Verify with
+`python -m app.cli doctor`.
+
+## Updating
+
+Stop the app, run `make update`, then `make dev` again. The update fetches the remote and fast-forwards only; it
+refuses when tracked files have uncommitted changes or the branch has diverged, so nothing local is ever overwritten.
+It then reinstalls dependencies and runs migrations. The dashboard shows a banner when an update is available
+(the API compares `HEAD` with its upstream after a `git fetch`, at most every 15 minutes; disable with
+`UPDATE_CHECK=false`).
 Tested on Linux only so far; macOS is supported by design but unverified.

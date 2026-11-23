@@ -57,6 +57,10 @@ class Settings(BaseSettings):
 
     media_root: str = "./projects"
 
+    # Let the API run `git fetch` (at most every 15 minutes) to tell the UI when
+    # a newer version is available. Nothing is installed automatically.
+    update_check: bool = True
+
     # Where runtime state (SQLite DB, credentials) lives. Derived from the
     # DATABASE_URL by default; override with DATA_DIR.
     data_dir: str = "./data"

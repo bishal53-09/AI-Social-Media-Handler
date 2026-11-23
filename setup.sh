@@ -78,8 +78,8 @@ cat <<MSG
 Done. Next steps:
   cd $INSTALL_DIR
   1. Edit .env and add ANTHROPIC_API_KEY (optional until you use AI features)
-  2. Start the backend:   .venv/bin/python -m app.cli serve
-  3. Start the frontend:  cd web && npm run dev
-  4. Open http://localhost:3000
+  2. Start the app:       make dev   (backend + frontend; Ctrl+C stops both)
+  3. Open http://localhost:3000
+  Update later:           make update
   Create a project:       .venv/bin/python -m app.cli init-project --name "My Project"
 MSG
