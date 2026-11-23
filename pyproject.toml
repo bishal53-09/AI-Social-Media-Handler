@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "ai-social-media-handler"
 version = "0.1.0"
 description = "Local-first, AI-assisted video production and multi-platform publishing."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "AI Social Media Handler contributors" }]
 classifiers = [
@@ -16,7 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
-    "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
     "fastapi>=0.115,<1",
