@@ -212,6 +212,22 @@ export interface AppSettings {
   export_presets: string[];
 }
 
+export interface UpdateStatus {
+  supported: boolean;
+  update_available: boolean;
+  branch: string | null;
+  upstream: string | null;
+  local_commit: string | null;
+  remote_commit: string | null;
+  behind: number;
+  ahead: number;
+  dirty: boolean;
+  fetched: boolean;
+  checked_at: string;
+  command: string;
+  message: string;
+}
+
 // ---- Posts, engagement and analytics ---------------------------------------------------
 
 export type CapabilityState = "implemented" | "planned" | "unavailable";
