@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-social-media-handler.local/schemas/clip.schema.json",
+  "title": "Clip",
+  "description": "One source clip and everything derived from it.",
+  "type": "object",
+  "required": ["id", "title", "source", "processing", "outputs", "posts"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^clip_[a-z0-9]+$" },
+    "title": { "type": "string", "maxLength": 300 },
+    "source": {
+      "type": "object",
+      "required": ["file", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "description": "Path relative to the project root. Never absolute, never contains '..'.",
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$"
+        },
+        "type": { "enum": ["360", "360-stitched", "flat", "image", "unknown"] },
+        "camera": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "metadata": {
+          "type": ["object", "null"],
+          "properties": {
+            "width": { "type": ["integer", "null"] },
+            "height": { "type": ["integer", "null"] },
+            "fps": { "type": ["number", "null"] },
+            "duration": { "type": ["number", "null"] },
+            "video_codec": { "type": ["string", "null"] },
+            "audio_codec": { "type": ["string", "null"] },
+            "pixel_format": { "type": ["string", "null"] },
+            "color_space": { "type": ["string", "null"] },
+            "color_transfer": { "type": ["string", "null"] },
+            "color_primaries": { "type": ["string", "null"] },
+            "is_equirectangular": { "type": ["boolean", "null"] }
+          }
+        }
+      }
+    },
+    "processing": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["pending", "in_progress", "completed", "failed"] },
+        "color_profile": { "type": ["string", "null"] },
+        "lut": { "type": ["string", "null"] },
+        "edit_version": { "type": "integer", "minimum": 0 },
+        "thumbnail": { "type": ["string", "null"] },
+        "proxy": { "type": ["string", "null"] }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "kind", "created_at"],
+        "properties": {
+          "file": { "type": "string" },
+          "kind": { "type": "string" },
+          "preset": { "type": ["string", "null"] },
+          "job_id": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "posts": { "type": "array", "items": { "type": "string" }, "description": "Post IDs (see post.schema.json)." }
+  }
+}

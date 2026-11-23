@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-social-media-handler.local/schemas/post.schema.json",
+  "title": "Post",
+  "description": "Persistent metadata for one platform post.",
+  "type": "object",
+  "required": ["id", "platform", "output_file", "status", "created_at", "updated_at", "attempts"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^post_[a-z0-9]+$" },
+    "platform": { "type": "string" },
+    "variant": { "type": ["string", "null"], "description": "e.g. reels, stories, shorts" },
+    "account_id": { "type": ["string", "null"] },
+    "clip_ids": { "type": "array", "items": { "type": "string" } },
+    "output_file": { "type": "string" },
+    "caption": { "type": ["string", "null"] },
+    "hashtags": { "type": "array", "items": { "type": "string", "pattern": "^#?[\\w]+$" } },
+    "scheduled_at": { "type": ["string", "null"], "format": "date-time" },
+    "status": {
+      "enum": ["draft", "approved", "queued", "uploading", "processing", "published", "failed", "unknown", "cancelled"]
+    },
+    "approved_by": { "type": ["string", "null"] },
+    "approved_at": { "type": ["string", "null"], "format": "date-time" },
+    "external_post_id": { "type": ["string", "null"] },
+    "external_url": { "type": ["string", "null"] },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["attempt", "started_at", "outcome"],
+        "properties": {
+          "attempt": { "type": "integer", "minimum": 1 },
+          "started_at": { "type": "string", "format": "date-time" },
+          "finished_at": { "type": ["string", "null"], "format": "date-time" },
+          "outcome": { "enum": ["success", "failed", "unknown", "in_progress"] },
+          "idempotency_key": { "type": ["string", "null"] },
+          "upload_reference": { "type": ["string", "null"] },
+          "error": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "error": { "type": ["string", "null"] },
+    "published_at": { "type": ["string", "null"], "format": "date-time" },
+    "analytics": { "type": ["object", "null"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

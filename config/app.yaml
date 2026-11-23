@@ -1,0 +1,35 @@
+# General application settings. Values here are non-secret defaults.
+# Secrets and machine-specific values come from .env (see .env.example).
+app:
+  name: AI Social Media Handler
+  # The API is a local desktop backend. Do not bind to 0.0.0.0 unless you
+  # understand the exposure (see docs/security.md).
+  host: 127.0.0.1
+  port: 8000
+  cors_origins:
+    - http://127.0.0.1:3000
+    - http://localhost:3000
+
+logging:
+  level: INFO
+  # Log directory is relative to the repository root unless absolute.
+  directory: logs
+
+projects:
+  # Where `init-project` and the dashboard put new projects when no path is
+  # given. Overridden by MEDIA_ROOT in .env.
+  default_root: ./projects
+  # API-created projects must live under one of these roots (path traversal
+  # protection). "~" expands to the user's home directory. MEDIA_ROOT is
+  # always allowed.
+  allowed_roots:
+    - "~"
+
+media:
+  # Extensions treated as video during scanning (case-insensitive).
+  video_extensions: [".mp4", ".mov", ".m4v", ".mkv", ".osv", ".insv"]
+  image_extensions: [".jpg", ".jpeg", ".png", ".dng", ".heic"]
+  # Files above this size are skipped by the scanner (GiB).
+  max_file_size_gb: 200
+  # Folders (relative to the project) scanned for source media.
+  scan_folders: ["media/raw", "media/stitched"]

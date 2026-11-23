@@ -1,0 +1,54 @@
+# Processing pipeline configuration. Stages run in this order.
+# Stages marked implemented: false are documented extension points and are
+# refused by the orchestrator rather than faking success.
+stages:
+  - name: ingest
+    implemented: true
+  - name: probe
+    implemented: true
+  - name: thumbnails
+    implemented: true
+  - name: proxies
+    implemented: true
+  - name: analysis        # AI footage analysis (explicit opt-in, see ai.yaml)
+    implemented: false
+  - name: color_grading
+    implemented: false
+  - name: reframing
+    implemented: false
+  - name: editing
+    implemented: false
+  - name: subtitles
+    implemented: false
+  - name: audio
+    implemented: false
+  - name: rendering
+    implemented: false
+  - name: validation
+    implemented: true
+
+thumbnails:
+  width: 480
+  # Position of the extracted frame as a fraction of the clip duration.
+  position: 0.1
+  format: jpg
+  quality: 85
+
+proxies:
+  # Editing proxies: small H.264 files for smooth scrubbing in the dashboard.
+  height: 540
+  # 360° equirectangular sources keep 2:1 and use this height instead.
+  equirect_height: 960
+  video_codec: libx264
+  preset: veryfast
+  crf: 28
+  audio_codec: aac
+  audio_bitrate: 96k
+  # Proxies longer than this many seconds are still generated; this only
+  # bounds ffmpeg runtime per clip (seconds). 0 = no limit.
+  timeout_seconds: 3600
+
+ffmpeg:
+  binary: ffmpeg
+  ffprobe_binary: ffprobe
+  probe_timeout_seconds: 60

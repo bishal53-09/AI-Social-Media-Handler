@@ -1,0 +1,55 @@
+# Platform integration settings. Credentials come from .env, never this file.
+# "enabled" only controls whether the adapter is offered in the UI; publishing
+# itself is not implemented yet in any adapter (see docs/platform-integrations.md).
+publishing:
+  # Human approval is required before any post can be queued. Do not disable
+  # unless you have built your own review step.
+  require_approval: true
+
+platforms:
+  instagram:
+    enabled: true
+    api: Meta Graph API
+    env: [META_APP_ID, META_APP_SECRET]
+    media:
+      reels:
+        max_duration_seconds: 900
+        min_duration_seconds: 3
+        aspect_ratios: ["9:16"]
+        max_file_size_mb: 1024
+        containers: [mp4, mov]
+  tiktok:
+    enabled: true
+    api: TikTok Content Posting API
+    env: [TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET]
+    media:
+      video:
+        max_duration_seconds: 600
+        min_duration_seconds: 3
+        aspect_ratios: ["9:16", "1:1", "16:9"]
+        max_file_size_mb: 4096
+        containers: [mp4, mov, webm]
+  youtube:
+    enabled: true
+    api: YouTube Data API v3
+    env: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET]
+    media:
+      video:
+        max_duration_seconds: 43200
+        min_duration_seconds: 1
+        aspect_ratios: ["16:9", "9:16", "1:1", "4:3"]
+        max_file_size_mb: 262144
+        containers: [mp4, mov, mkv, webm]
+      # Shorts use the same YouTube adapter with Shorts metadata/presets.
+      shorts:
+        max_duration_seconds: 180
+        min_duration_seconds: 1
+        aspect_ratios: ["9:16", "1:1"]
+        max_file_size_mb: 262144
+        containers: [mp4, mov]
+  facebook:
+    enabled: false
+  linkedin:
+    enabled: false
+  x:
+    enabled: false

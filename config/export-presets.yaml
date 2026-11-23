@@ -1,0 +1,58 @@
+# Platform-specific export presets used by the (future) rendering stage and
+# by media validation today.
+presets:
+  instagram-reel:
+    platform: instagram
+    kind: reels
+    width: 1080
+    height: 1920
+    fps: 30
+    video_codec: libx264
+    video_bitrate: 8M
+    audio_codec: aac
+    audio_bitrate: 192k
+    container: mp4
+  tiktok-video:
+    platform: tiktok
+    kind: video
+    width: 1080
+    height: 1920
+    fps: 30
+    video_codec: libx264
+    video_bitrate: 8M
+    audio_codec: aac
+    audio_bitrate: 192k
+    container: mp4
+  youtube-landscape:
+    platform: youtube
+    kind: video
+    width: 3840
+    height: 2160
+    fps: 30
+    video_codec: libx264
+    video_bitrate: 40M
+    audio_codec: aac
+    audio_bitrate: 320k
+    container: mp4
+  youtube-short:
+    platform: youtube
+    kind: shorts
+    width: 1080
+    height: 1920
+    fps: 30
+    video_codec: libx264
+    video_bitrate: 10M
+    audio_codec: aac
+    audio_bitrate: 192k
+    container: mp4
+  square:
+    platform: any
+    kind: video
+    width: 1080
+    height: 1080
+    fps: 30
+    video_codec: libx264
+    video_bitrate: 6M
+    audio_codec: aac
+    audio_bitrate: 192k
+    container: mp4

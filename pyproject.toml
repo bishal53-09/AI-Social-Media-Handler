@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-social-media-handler"
+version = "0.1.0"
+description = "Local-first, AI-assisted video production and multi-platform publishing."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "AI Social Media Handler contributors" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.3,<3",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+    "typer>=0.12,<1",
+    "pyyaml>=6,<7",
+    "jsonschema[format-nongpl]>=4.22,<5",
+    "pillow>=10,<14",
+    "anthropic>=0.60",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "types-PyYAML",
+    "types-jsonschema",
+]
+
+[project.scripts]
+asmh = "app.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["app*", "platforms*"]
+
+[tool.setuptools.package-data]
+"app.ai.prompts" = ["*.md"]
+"app.database" = ["migrations/*.py", "migrations/versions/*.py", "migrations/*.mako"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["web", "app/database/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = [
+    "S101",   # assert is fine in tests
+    "S603",   # subprocess without shell is our intended, audited pattern
+    "S607",   # partial executable paths (ffmpeg, git) are resolved via shutil.which
+    "B008",   # FastAPI/Typer default-argument call pattern
+    "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["ffmpeg: requires ffmpeg/ffprobe on PATH"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["app", "platforms"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = true
+exclude = ["app/database/migrations/"]

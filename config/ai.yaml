@@ -1,0 +1,27 @@
+# AI provider configuration. The API key comes from ANTHROPIC_API_KEY in .env.
+provider: anthropic
+
+anthropic:
+  model: claude-opus-5-5
+  max_tokens: 16000
+  # Reasoning effort: low | medium | high | xhigh | max
+  effort: high
+  timeout_seconds: 300
+  # Let the API re-run a request on a substitute model if the primary declines it.
+  server_side_fallbacks: true
+
+# Media transmission policy. Nothing is sent to an AI provider unless this is
+# explicitly enabled. Whole videos are never uploaded; only sampled frames
+# (downscaled JPEGs) and technical metadata.
+media_transmission:
+  allow_frames: false
+  max_frames_per_clip: 8
+  frame_width: 768
+  jpeg_quality: 80
+
+# Constraints applied when validating AI-generated edit plans.
+edit_plan:
+  max_segments: 60
+  max_duration_seconds: 600
+  allowed_formats: ["9:16", "16:9", "1:1"]
+  fov_range: [30, 120]

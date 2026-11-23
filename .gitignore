@@ -1,0 +1,102 @@
+# ---------------------------------------------------------------------------
+# Secrets — never commit these
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials*.json
+client_secret*.json
+token*.json
+*.tokens.json
+secrets/
+.secrets/
+
+# ---------------------------------------------------------------------------
+# Runtime data, user projects and media
+# ---------------------------------------------------------------------------
+/data/
+/projects/
+/logs/
+/backups/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.log
+
+# Media files (footage, renders, proxies) must never enter the repo
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.mkv
+*.avi
+*.m4v
+*.webm
+*.osv
+*.OSV
+*.insv
+*.lrv
+*.LRV
+*.wav
+*.mp3
+*.aac
+*.m4a
+*.cube
+*.3dl
+# Allow committed docs/brand images only under docs/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.dng
+!docs/**/*.png
+!docs/**/*.jpg
+!web/public/**/*.png
+!web/public/**/*.svg
+
+# Real project metadata
+project.json
+!tests/fixtures/**/project.json
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Node / Next.js
+# ---------------------------------------------------------------------------
+node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# OS / editors
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
