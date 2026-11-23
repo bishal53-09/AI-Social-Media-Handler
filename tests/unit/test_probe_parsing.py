@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from app.pipeline.ffmpeg import parse_probe, parse_progress_line
 from app.pipeline.stages.probe import classify_media
 
@@ -42,10 +44,37 @@ def test_basic_fields_and_colour_metadata() -> None:
     assert p.has_audio and p.video_stream_count == 1
 
 
-def test_two_to_one_is_heuristic_equirectangular_with_warning() -> None:
+def test_two_to_one_without_metadata_is_only_flagged_as_possible_360() -> None:
     p = parse_probe(probe_json())
-    assert p.is_equirectangular and p.projection_source == "aspect_ratio_heuristic"
-    assert p.warnings and "Verify" in p.warnings[0]
+    assert not p.is_equirectangular and p.projection is None and p.projection_source is None
+    assert p.possible_360 and p.to_dict()["possible_360"] is True
+    assert p.warnings and "media/stitched/" in p.warnings[0]
+
+
+def test_two_to_one_counts_as_360_only_inside_the_stitched_folder() -> None:
+    p = parse_probe(probe_json())
+    assert classify_media("media/raw/2026-11-23/wide.mp4", p) == "flat"
+    assert classify_media("media/stitched/pano.mp4", p) == "360-stitched"
+
+
+@pytest.mark.parametrize(
+    ("rel", "size", "side_data"),
+    [
+        ("media/raw/phone.mov", (1080, 1920), []),  # vertical phone clip
+        ("media/raw/phone-rotated.mp4", (1920, 1080), [{"rotation": -90}]),  # stored landscape, shown vertical
+        ("media/raw/camera.mkv", (3840, 2160), []),
+        ("media/raw/drone.MP4", (2720, 1530), []),
+        ("media/raw/screen.webm", (1440, 900), []),
+        ("media/raw/square.mp4", (1080, 1080), []),
+        ("media/ready/final-edit.mp4", (1920, 1080), []),
+    ],
+)
+def test_ordinary_video_from_any_source_is_flat(
+    rel: str, size: tuple[int, int], side_data: list[dict[str, Any]]
+) -> None:
+    p = parse_probe(probe_json(width=size[0], height=size[1], side_data_list=side_data))
+    assert classify_media(rel, p) == "flat"
+    assert not p.is_equirectangular and not p.possible_360 and not p.warnings
 
 
 def test_spherical_metadata_is_authoritative() -> None:

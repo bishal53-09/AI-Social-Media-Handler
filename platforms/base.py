@@ -205,6 +205,11 @@ def validate_against_limits(path: Path, probe: dict[str, Any], limits: MediaLimi
             )
     if probe.get("is_equirectangular"):
         errors.append("Equirectangular 360 video must be reframed before publishing.")
+    elif probe.get("possible_360"):
+        warnings.append(
+            "2:1 frame without 360 metadata. Fine for an ordinary wide video; "
+            "if this is an unreframed 360 export, reframe it first."
+        )
     return MediaValidation(ok=not errors, errors=errors, warnings=warnings)
 
 

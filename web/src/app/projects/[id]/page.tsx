@@ -169,9 +169,9 @@ export default function ProjectDetailPage() {
           <div>
             <CardTitle>Media inventory</CardTitle>
             <CardDescription>
-              Originals are read-only. Put camera files in{" "}
-              <code className="font-mono">media/raw/&lt;YYYY-MM-DD&gt;/</code> and stitched exports
-              in <code className="font-mono">media/stitched/</code>.
+              Originals are read-only. Put videos from any phone, camera or app in{" "}
+              <code className="font-mono">media/raw/</code> (date folders are optional). Only 360
+              footage uses <code className="font-mono">media/stitched/</code>.
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">

@@ -12,7 +12,7 @@ from app.core.config import FfmpegConfig
 from app.core.exceptions import MediaProcessingError
 from app.core.security import run_command, which
 
-#: Aspect-ratio tolerance when guessing equirectangular projection from size.
+#: Aspect-ratio tolerance when flagging a 2:1 frame as possibly 360.
 EQUIRECT_TOLERANCE = 0.02
 
 
@@ -36,10 +36,14 @@ class ProbeResult:
     video_stream_count: int = 0
     audio_stream_count: int = 0
     has_audio: bool = False
-    # equirectangular | None
+    # equirectangular | None — set only from explicit spherical metadata
     projection: str | None = None
-    # metadata | aspect_ratio_heuristic | None
+    # metadata | None
     projection_source: str | None = None
+    #: 2:1 frame without spherical metadata. Could be a stitched 360 export that
+    #: lost its metadata, or an ordinary wide video; it is *not* treated as 360
+    #: unless it sits in ``media/stitched/`` (see ``classify_media``).
+    possible_360: bool = False
     make: str | None = None
     model: str | None = None
     creation_time: str | None = None
@@ -146,10 +150,10 @@ def parse_probe(data: dict[str, Any]) -> ProbeResult:
     if res.projection is None and res.width and res.height:
         ratio = res.width / res.height
         if abs(ratio - 2.0) <= 2.0 * EQUIRECT_TOLERANCE:
-            res.projection, res.projection_source = "equirectangular", "aspect_ratio_heuristic"
+            res.possible_360 = True
             res.warnings.append(
-                "2:1 aspect ratio — treated as equirectangular, but no spherical metadata "
-                "was found. Verify before reframing."
+                "2:1 aspect ratio without spherical metadata. Treated as an ordinary video; "
+                "if it is a stitched 360 export, put it in media/stitched/."
             )
     return res
 

@@ -256,7 +256,7 @@ def init_project(
     name: str = typer.Option(..., "--name", help="Human-readable project name."),
     path: str = typer.Option(None, "--path", help="Project directory (default: <MEDIA_ROOT>/<slug>)."),
     description: str = typer.Option(None, "--description"),
-    camera: str = typer.Option(None, "--camera", help='Default camera, e.g. "DJI Osmo 360 II".'),
+    camera: str = typer.Option(None, "--camera", help='Default camera, e.g. "iPhone 16" or "Sony ZV-E10".'),
 ) -> None:
     """Create a project directory tree with metadata and register it."""
     from app.services.project_service import ProjectService
@@ -270,7 +270,8 @@ def init_project(
         raise _fail(exc) from exc
     typer.secho(f"Created project '{project.name}' ({project.id})", fg=typer.colors.GREEN)
     typer.echo(f"  Location: {project.path}")
-    typer.echo("  Put camera originals in media/raw/<YYYY-MM-DD>/ and stitched exports in media/stitched/.")
+    typer.echo("  Put videos from any device in media/raw/ (optionally in <YYYY-MM-DD>/ folders).")
+    typer.echo("  360 footage only: put stitched exports in media/stitched/.")
     typer.echo(f"  Next: python -m app.cli scan {project.path}")
 
 

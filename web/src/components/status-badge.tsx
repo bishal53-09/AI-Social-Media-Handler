@@ -31,6 +31,13 @@ export function PostStatusBadge({ status }: { status: string }) {
 }
 
 export function MediaTypeBadge({ type }: { type: string }) {
-  const label = type === "360-stitched" ? "360° stitched" : type === "360" ? "360° original" : type;
+  const label =
+    type === "360-stitched"
+      ? "360° stitched"
+      : type === "360"
+        ? "360° original"
+        : type === "flat"
+          ? "standard"
+          : type;
   return <Badge variant={type.startsWith("360") ? "default" : "secondary"}>{label}</Badge>;
 }

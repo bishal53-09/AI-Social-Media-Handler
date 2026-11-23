@@ -8,3 +8,7 @@ abstraction with Anthropic provider, FastAPI API, CLI, Next.js dashboard, CI.
 - `make dev` starts backend and frontend together and prints the dashboard URL; Ctrl+C stops both.
 - `make update` fast-forwards to the latest upstream commit, reinstalls dependencies and runs migrations.
 - `GET /api/v1/system/update` and a dashboard banner / Settings card show when an update is available.
+- Source-agnostic media: any video ffprobe can read is imported, probed, thumbnailed and proxied, whatever the device
+  (phone, camera, drone, screen recording, finished edit). More video extensions are scanned by default, proxies cap the
+  shorter side so vertical video keeps its quality, a 2:1 video is treated as 360 only with spherical metadata or when
+  placed in `media/stitched/`, and the default camera applies to every source. 360 handling stays an optional workflow.
