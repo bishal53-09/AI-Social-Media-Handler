@@ -81,6 +81,19 @@ def test_raw_equirectangular_is_never_publishable(mp4: Path) -> None:
         assert not r.ok and any("reframed" in e for e in r.errors), name
 
 
+def test_ordinary_wide_video_without_360_metadata_is_only_warned(mp4: Path) -> None:
+    from platforms.base import MediaLimits, validate_against_limits
+
+    r = validate_against_limits(mp4, probe(width=1920, height=960, possible_360=True), MediaLimits())
+    assert r.ok and any("360" in w for w in r.warnings)
+
+
+@pytest.mark.parametrize(("name", "variant"), [("instagram", None), ("tiktok", None), ("youtube", "shorts")])
+def test_plain_vertical_phone_video_is_publishable(mp4: Path, name: str, variant: str | None) -> None:
+    r = create_adapter(name).validate_media(mp4, probe(duration=20.0), variant)
+    assert r.ok, r.errors
+
+
 def test_file_size_limit(mp4: Path) -> None:
     cfg = {"media": {"video": {"max_file_size_mb": 0.0001, "containers": ["mp4"]}}}
     r = create_adapter("tiktok", cfg).validate_media(mp4, probe())

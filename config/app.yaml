@@ -26,10 +26,12 @@ projects:
     - "~"
 
 media:
-  # Extensions treated as video during scanning (case-insensitive).
-  video_extensions: [".mp4", ".mov", ".m4v", ".mkv", ".osv", ".insv"]
+  # Extensions treated as video during scanning (case-insensitive). Any video
+  # ffprobe can read works; .osv/.insv are optional 360 camera originals.
+  video_extensions: [".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".mts", ".m2ts", ".3gp", ".osv", ".insv"]
   image_extensions: [".jpg", ".jpeg", ".png", ".dng", ".heic"]
   # Files above this size are skipped by the scanner (GiB).
   max_file_size_gb: 200
-  # Folders (relative to the project) scanned for source media.
+  # Folders (relative to the project) scanned for source media. media/raw holds
+  # video from any device or app; media/stitched is only for 360 exports.
   scan_folders: ["media/raw", "media/stitched"]

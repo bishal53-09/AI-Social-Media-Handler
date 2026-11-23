@@ -108,7 +108,19 @@ class Settings(BaseSettings):
 
 
 class MediaConfig(BaseModel):
-    video_extensions: list[str] = [".mp4", ".mov", ".m4v", ".mkv", ".osv", ".insv"]
+    video_extensions: list[str] = [
+        ".mp4",
+        ".mov",
+        ".m4v",
+        ".mkv",
+        ".webm",
+        ".avi",
+        ".mts",
+        ".m2ts",
+        ".3gp",
+        ".osv",
+        ".insv",
+    ]
     image_extensions: list[str] = [".jpg", ".jpeg", ".png", ".dng", ".heic"]
     max_file_size_gb: float = 200
     scan_folders: list[str] = ["media/raw", "media/stitched"]

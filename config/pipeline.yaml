@@ -36,6 +36,7 @@ thumbnails:
 
 proxies:
   # Editing proxies: small H.264 files for smooth scrubbing in the dashboard.
+  # Caps the shorter side, so landscape, vertical and square video all fit.
   height: 540
   # 360° equirectangular sources keep 2:1 and use this height instead.
   equirect_height: 960

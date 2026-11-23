@@ -164,7 +164,7 @@ export default function DashboardPage() {
                 </Link>
               </Step>
               <Step done={media > 0}>
-                Add footage to <code className="font-mono text-xs">media/raw/&lt;date&gt;/</code>{" "}
+                Add videos from any device to <code className="font-mono text-xs">media/raw/</code>{" "}
                 and scan
               </Step>
               <Step done={!!o?.settings.ai_key_configured}>

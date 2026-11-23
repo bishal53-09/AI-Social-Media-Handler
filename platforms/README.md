@@ -29,7 +29,7 @@ class PlatformAdapter(ABC):
 ```
 
 `validate_media` is real: it checks container, size, duration, aspect ratio and
-refuses un-reframed equirectangular video, using limits from
+refuses un-reframed equirectangular video (tagged with 360 metadata), using limits from
 `config/platforms.yaml`.
 
 ## Adding a platform

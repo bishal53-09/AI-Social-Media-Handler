@@ -19,7 +19,7 @@ def describe_clip(clip_id: str, probe: dict[str, Any], media_type: str) -> str:
         "duration_seconds": probe.get("duration"),
         "resolution": f"{probe.get('width')}x{probe.get('height')}",
         "fps": probe.get("fps"),
-        "equirectangular_360": bool(probe.get("is_equirectangular")),
+        "equirectangular_360": media_type == "360-stitched" or bool(probe.get("is_equirectangular")),
         "has_audio": probe.get("has_audio"),
     }
     return "\n".join(f"{k}: {v}" for k, v in fields.items())

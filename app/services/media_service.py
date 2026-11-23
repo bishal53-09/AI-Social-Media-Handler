@@ -24,6 +24,7 @@ from app.tracking.events import append_event
 from app.tracking.repository import ProjectRepository
 
 _DAY_RE = re.compile(r"(?:^|/)(\d{4}-\d{2}-\d{2})(?:/|$)")
+# "raw" = source video from any device or app; "stitched" = optional 360 exports.
 _STAGE_BY_FOLDER = {"media/raw": "raw", "media/stitched": "stitched"}
 _SCHEMA_TYPES = {"360", "360-stitched", "flat", "image", "unknown"}
 
@@ -300,7 +301,7 @@ class MediaService:
             "color_space": p.get("color_space"),
             "color_transfer": p.get("color_transfer"),
             "color_primaries": p.get("color_primaries"),
-            "is_equirectangular": p.get("is_equirectangular"),
+            "is_equirectangular": True if a.media_type == "360-stitched" else p.get("is_equirectangular"),
         }
         src_type = "image" if a.kind == "image" else (a.media_type if a.media_type in _SCHEMA_TYPES else "unknown")
         status = "pending"
@@ -309,7 +310,8 @@ class MediaService:
         source = {
             "file": a.relative_path,
             "type": src_type,
-            "camera": a.camera or (default_camera if src_type.startswith("360") else None),
+            # Metadata wins; the project's default camera fills the gap for any source.
+            "camera": a.camera or default_camera,
             "sha256": a.sha256,
             "size_bytes": a.size_bytes,
             "metadata": meta if a.probe else None,

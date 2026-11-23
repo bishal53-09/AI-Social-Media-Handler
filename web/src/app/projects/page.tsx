@@ -72,7 +72,7 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
               id="camera"
               value={camera}
               onChange={(e) => setCamera(e.target.value)}
-              placeholder="DJI Osmo 360 II"
+              placeholder="Optional, e.g. iPhone 16"
             />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">

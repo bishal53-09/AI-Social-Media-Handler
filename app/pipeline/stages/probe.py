@@ -6,20 +6,27 @@ from app.pipeline.base import Stage, StageContext, StageResult
 from app.pipeline.ffmpeg import ProbeResult, probe_file
 
 ORIGINAL_360_EXTENSIONS = {".osv", ".insv"}
+#: Folder for stitched 360 exports (optional workflow).
+STITCHED_FOLDER = "media/stitched/"
 
 
 def classify_media(source_rel: str, probe: ProbeResult) -> str:
-    """Return ``360`` (camera original), ``360-stitched`` or ``flat``.
+    """Return ``flat`` (any ordinary video), ``360-stitched`` or ``360``.
 
-    * ``.osv`` / ``.insv`` are camera-original containers that still need
-      stitching in the vendor's software.
-    * Anything equirectangular (spherical metadata, or a 2:1 frame as a
-      heuristic) is treated as stitched 360 footage.
+    Ordinary video from any source (phone, camera, drone, screen recording,
+    finished edit) is ``flat``. 360 handling is opt-in:
+
+    * ``.osv`` / ``.insv`` are 360 camera-original containers (``360``).
+    * Spherical metadata marks a stitched 360 export (``360-stitched``).
+    * A 2:1 frame without that metadata counts as 360 only inside
+      ``media/stitched/``; elsewhere it is an ordinary wide video.
     """
     ext = "." + source_rel.rsplit(".", 1)[-1].lower() if "." in source_rel else ""
     if ext in ORIGINAL_360_EXTENSIONS:
         return "360"
     if probe.is_equirectangular:
+        return "360-stitched"
+    if probe.possible_360 and source_rel.startswith(STITCHED_FOLDER):
         return "360-stitched"
     return "flat"
 

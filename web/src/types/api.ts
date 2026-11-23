@@ -76,6 +76,7 @@ export interface ProbeData {
   video_codec?: string | null;
   audio_codec?: string | null;
   is_equirectangular?: boolean;
+  possible_360?: boolean;
   projection_source?: string | null;
   warnings?: string[];
 }

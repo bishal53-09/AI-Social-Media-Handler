@@ -26,7 +26,7 @@ class _NotImplementedStage(Stage):
 class ColorGradingStage(_NotImplementedStage):
     """TODO(phase 3): apply a LUT / colour transform.
 
-    Inputs: a stitched video plus a colour profile that distinguishes the
+    Inputs: a source video (or stitched 360 export) plus a colour profile that distinguishes the
     camera-original profile, the stitched colour space, the LUT input space and
     the output space (docs/pipeline.md). Output: ``media/processed/color-graded/``.
     The camera-specific transform stays configurable until verified.
@@ -34,7 +34,7 @@ class ColorGradingStage(_NotImplementedStage):
 
     name = "color_grading"
     phase = "Phase 3"
-    description = "Camera-specific colour transforms are not verified for the Osmo 360 II."
+    description = "Camera-specific colour transforms (log profiles, LUTs) are not verified for any camera yet."
 
 
 class ReframingStage(_NotImplementedStage):

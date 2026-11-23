@@ -19,7 +19,10 @@
           "type": "string",
           "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$"
         },
-        "type": { "enum": ["360", "360-stitched", "flat", "image", "unknown"] },
+        "type": {
+          "description": "flat = any ordinary video from any source; 360 = 360 camera original; 360-stitched = stitched 360 export.",
+          "enum": ["360", "360-stitched", "flat", "image", "unknown"]
+        },
         "camera": { "type": ["string", "null"] },
         "sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
         "size_bytes": { "type": ["integer", "null"], "minimum": 0 },

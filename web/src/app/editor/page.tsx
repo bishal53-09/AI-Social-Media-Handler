@@ -79,7 +79,7 @@ export default function EditorPage() {
             </CardHeader>
             <CardContent>
               <pre className="overflow-x-auto rounded-md bg-muted p-2.5 font-mono text-[11px]">
-                python -m app.cli analyze ~/Content/MyProject media/stitched/ride.mp4 --allow-frames
+                python -m app.cli analyze ~/Content/MyProject media/raw/clip.mp4 --allow-frames
               </pre>
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Results are saved to <code className="font-mono">data/analysis/</code> in the

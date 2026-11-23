@@ -44,8 +44,8 @@ export default function MediaPage() {
                   onChange={(e) => setStage(e.target.value as StageFilter)}
                 >
                   <option value="">All</option>
-                  <option value="raw">Raw</option>
-                  <option value="stitched">Stitched</option>
+                  <option value="raw">Source videos</option>
+                  <option value="stitched">360 stitched</option>
                 </select>
               </label>
               <ProjectSelect projects={projects.data.items} value={selected} onChange={select} />
@@ -71,7 +71,7 @@ export default function MediaPage() {
         <EmptyState
           icon={Film}
           title="No media indexed"
-          description="Open the project and click “Scan media” after adding footage to media/raw or media/stitched."
+          description="Add videos from any device to media/raw (360 exports go in media/stitched), then open the project and click “Scan media”."
         />
       ) : (
         <Card className="py-0">

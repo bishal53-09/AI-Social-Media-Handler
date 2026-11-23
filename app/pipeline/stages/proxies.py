@@ -16,6 +16,19 @@ from app.pipeline.stages.thumbnails import needs_stitching
 PROXY_DIR = "media/proxies"
 
 
+def proxy_scale_filter(target: int, *, equirect: bool = False) -> str:
+    """ffmpeg scale filter for proxies; never upscales and keeps even dimensions.
+
+    Ordinary video caps its *shorter* side at ``target`` so landscape, vertical
+    (9:16 phone video) and square sources all get the same proxy quality.
+    360 equirectangular sources cap their height instead (they are always 2:1).
+    """
+    if equirect:
+        return f"scale=-2:'min({target},ih)'"
+    short = f"2*trunc(min({target},min(iw,ih))/2)"
+    return f"scale='if(gte(iw,ih),-2,{short})':'if(gte(iw,ih),{short},-2)'"
+
+
 class ProxyStage(Stage):
     name = "proxies"
 
@@ -41,7 +54,8 @@ class ProxyStage(Stage):
                 outputs={"proxy": rel}, config_used=cfg_used, skipped=True, message="Proxy already exists."
             )
 
-        height = cfg.equirect_height if media_type in ("360", "360-stitched") else cfg.height
+        is_360 = media_type in ("360", "360-stitched")
+        height = cfg.equirect_height if is_360 else cfg.height
         cfg_used = {**cfg_used, "target_height": height}
         tmp = out.with_name(f".{out.stem}.partial.mp4")
         tmp.unlink(missing_ok=True)
@@ -57,9 +71,8 @@ class ProxyStage(Stage):
             "0:v:0",
             "-map",
             "0:a:0?",
-            # never upscale; keep even dimensions for H.264
             "-vf",
-            f"scale=-2:'min({height},ih)'",
+            proxy_scale_filter(height, equirect=is_360),
             "-c:v",
             cfg.video_codec,
             "-preset",

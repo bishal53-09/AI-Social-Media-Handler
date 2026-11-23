@@ -34,7 +34,7 @@ class MediaAsset(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger, default=0)
     mtime: Mapped[float] = mapped_column(default=0.0)
     sha256: Mapped[str | None] = mapped_column(String(64), default=None)
-    # 360 | 360-stitched | flat | unknown
+    # flat (any ordinary video) | 360 | 360-stitched | unknown (not probed yet)
     media_type: Mapped[str] = mapped_column(String(16), default="unknown")
     camera: Mapped[str | None] = mapped_column(String(100), default=None)
     probe: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)

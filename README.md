@@ -1,7 +1,7 @@
 # AI Social Media Handler
 
-A **local-first** application for organising camera footage, preparing it for editing, and (eventually) publishing
-finished videos to social platforms. AI plans; deterministic software executes. Your footage never leaves your
+A **local-first** application for organising video from any source (phone, camera, drone, screen recording or a
+finished edit), preparing it for editing, and (eventually) publishing it to social platforms. AI plans; deterministic software executes. Your footage never leaves your
 machine unless you explicitly allow it.
 
 > **Status: early foundation (v0.1.0).** Media ingest, probing, thumbnails, proxies, project tracking, the API, the
@@ -11,8 +11,11 @@ machine unless you explicitly allow it.
 ## What works today
 
 - Multiple independent projects stored **outside** the repository, with JSON metadata validated against schemas.
-- Non-destructive scanning of `media/raw/<date>/` and `media/stitched/`; originals are never modified.
-- Pipeline stages: ingest (SHA-256), probe (ffprobe, equirectangular/360 detection), thumbnails, proxies
+- Any video ffprobe can read (MP4, MOV, MKV, WebM, AVI, MTS and more) works: landscape, vertical or square.
+  Put it in `media/raw/` (date folders such as `media/raw/2026-11-23/` are optional); originals are never modified.
+- Optional 360 workflow: stitched 360 exports go in `media/stitched/`; `.osv`/`.insv` camera originals are recognised
+  but must be stitched in the camera vendor's software first. 360 reframing is not implemented yet.
+- Pipeline stages: ingest (SHA-256), probe (ffprobe, with 360 detection from spherical metadata), thumbnails, proxies
   (with progress and cancellation), validation. Re-running skips finished work.
 - Persistent jobs with event trace (SQLite), restart recovery of interrupted jobs.
 - Publishing state machine with approval gate, idempotency keys and an `unknown` state that requires reconciliation
@@ -48,7 +51,7 @@ cd web && npm run dev
 
 ```bash
 .venv/bin/python -m app.cli init-project --name "Alps Trip" --path ~/Content/alps
-# copy footage into ~/Content/alps/media/raw/2026-11-23/ , then:
+# copy videos from any device into ~/Content/alps/media/raw/ , then:
 .venv/bin/python -m app.cli scan ~/Content/alps
 .venv/bin/python -m app.cli process ~/Content/alps
 .venv/bin/python -m app.cli inventory ~/Content/alps
