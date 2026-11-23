@@ -18,6 +18,9 @@ machine unless you explicitly allow it.
 - Publishing state machine with approval gate, idempotency keys and an `unknown` state that requires reconciliation
   (no blind retries). Platform adapters validate media against platform limits but **cannot publish yet**.
 - AI provider abstraction with an Anthropic provider (structured, validated plans); frames are sent only with consent.
+- Post-first management: a post with the platforms it is shared to, per-platform analytics, comment list and interactions
+  (reply, like, hide, delete) through the adapter contract. Storage, API and UI are built and tested with a fake platform;
+  **no real platform integration exists yet**, so real posts show "not implemented" instead of data.
 - FastAPI backend, CLI, and a Next.js dashboard (dark/light) that shows real data and honest "not implemented" states.
 
 ## Requirements

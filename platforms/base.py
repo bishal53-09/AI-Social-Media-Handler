@@ -14,6 +14,7 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -109,6 +110,67 @@ class Analytics:
     metrics: dict[str, float | int] = field(default_factory=dict)
 
 
+#: Normalised metric names. Adapters map platform-specific names onto these and may
+#: add extra keys. Only ``ADDITIVE_METRICS`` are summed across platforms.
+METRIC_KEYS = (
+    "views",
+    "likes",
+    "comments",
+    "shares",
+    "saves",
+    "reach",
+    "impressions",
+    "watch_time_seconds",
+    "avg_view_duration_seconds",
+)
+ADDITIVE_METRICS = ("views", "likes", "comments", "shares", "saves", "watch_time_seconds")
+
+
+class Capability(StrEnum):
+    """Operations a platform adapter may offer."""
+
+    PUBLISH = "publish"
+    ANALYTICS = "analytics"
+    LIST_COMMENTS = "list_comments"
+    REPLY_COMMENT = "reply_comment"
+    LIKE_COMMENT = "like_comment"
+    HIDE_COMMENT = "hide_comment"
+    DELETE_COMMENT = "delete_comment"
+    LIKE_POST = "like_post"
+
+
+class CapabilityState(StrEnum):
+    #: Adapter code exists and is tested against the real API.
+    IMPLEMENTED = "implemented"
+    #: The platform's official API appears to allow it, but the adapter does not do it yet.
+    PLANNED = "planned"
+    #: The platform's official API does not offer it (or only to restricted programs).
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass
+class RemoteComment:
+    """A comment as reported by the platform."""
+
+    external_id: str
+    text: str
+    author_name: str | None = None
+    author_external_id: str | None = None
+    parent_external_id: str | None = None
+    like_count: int = 0
+    reply_count: int = 0
+    posted_at: datetime | None = None
+    #: True when written by the connected account itself (e.g. our own reply).
+    is_own: bool = False
+    hidden: bool = False
+
+
+@dataclass
+class CommentPage:
+    comments: list[RemoteComment] = field(default_factory=list)
+    next_cursor: str | None = None
+
+
 def _ratio(value: str) -> float:
     w, _, h = value.partition(":")
     return float(w) / float(h)
@@ -158,9 +220,45 @@ class PlatformAdapter(ABC):
     #: Environment variables holding the app credentials.
     env_vars: ClassVar[tuple[str, ...]] = ()
     docs_url: ClassVar[str] = ""
+    #: What the platform's official API is believed to allow. This is *documentation of
+    #: intent*, to be verified against current platform docs when implementing; it does
+    #: not mean the adapter can do it. ``engagement_notes`` explains caveats.
+    api_capabilities: ClassVar[frozenset[Capability]] = frozenset()
+    #: Capabilities with real, tested adapter code. Nothing sets this yet.
+    implemented_capabilities: ClassVar[frozenset[Capability]] = frozenset()
+    engagement_notes: ClassVar[str] = ""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
+
+    # -- capabilities -----------------------------------------------------------
+
+    @classmethod
+    def capability_state(cls, capability: Capability) -> CapabilityState:
+        if capability in cls.implemented_capabilities:
+            return CapabilityState.IMPLEMENTED
+        if capability in cls.api_capabilities:
+            return CapabilityState.PLANNED
+        return CapabilityState.UNAVAILABLE
+
+    @classmethod
+    def capability_map(cls) -> dict[str, str]:
+        return {c.value: cls.capability_state(c).value for c in Capability}
+
+    def require(self, capability: Capability) -> None:
+        """Raise a precise error unless this adapter can really perform ``capability``."""
+        state = self.capability_state(capability)
+        if state is CapabilityState.IMPLEMENTED:
+            return
+        reason = (
+            "is not offered by the platform's official API"
+            if state is CapabilityState.UNAVAILABLE
+            else "is not implemented yet"
+        )
+        raise UnsupportedOperationError(
+            f"{self.display_name}: {capability.value} {reason}.",
+            details={"platform": self.name, "capability": capability.value, "state": state.value},
+        )
 
     # -- limits / validation (implemented) ------------------------------------
 
@@ -211,3 +309,34 @@ class PlatformAdapter(ABC):
 
     def get_analytics(self, credentials: Credentials, external_post_id: str) -> Analytics:
         raise self._unsupported("get_analytics")
+
+    # -- engagement: comments and interactions (not implemented) ------------------
+    #
+    # Contract for implementers: these act on the *connected account's* behalf, must
+    # use only official APIs, and must raise on failure rather than return success.
+
+    def list_comments(
+        self, credentials: Credentials, external_post_id: str, *, cursor: str | None = None, limit: int = 50
+    ) -> CommentPage:
+        raise self._unsupported("list_comments")
+
+    def reply_to_comment(
+        self, credentials: Credentials, external_post_id: str, parent_comment_id: str, text: str
+    ) -> RemoteComment:
+        raise self._unsupported("reply_to_comment")
+
+    def like_comment(
+        self, credentials: Credentials, external_post_id: str, comment_id: str, *, like: bool = True
+    ) -> None:
+        raise self._unsupported("like_comment")
+
+    def set_comment_hidden(
+        self, credentials: Credentials, external_post_id: str, comment_id: str, *, hidden: bool = True
+    ) -> None:
+        raise self._unsupported("set_comment_hidden")
+
+    def delete_comment(self, credentials: Credentials, external_post_id: str, comment_id: str) -> None:
+        raise self._unsupported("delete_comment")
+
+    def like_post(self, credentials: Credentials, external_post_id: str, *, like: bool = True) -> None:
+        raise self._unsupported("like_post")

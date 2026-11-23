@@ -2,10 +2,10 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import health, jobs, posts, projects, settings
+from app.api.routes import analytics, content_posts, health, jobs, posts, projects, settings
 
 api_router = APIRouter(prefix="/api/v1")
-for _module in (health, projects, jobs, posts, settings):
+for _module in (health, projects, content_posts, jobs, posts, analytics, settings):
     api_router.include_router(_module.router)
 
 __all__ = ["api_router"]

@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   Menu,
+  Newspaper,
   Send,
   Settings,
   Sparkles,
@@ -24,6 +25,7 @@ import { api, API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/posts", label: "Posts", icon: Newspaper },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
@@ -79,7 +81,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2 px-4 py-3">
+    <Link href="/posts" className="flex items-center gap-2 px-4 py-3">
       <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
         <Clapperboard className="size-4" />
       </span>

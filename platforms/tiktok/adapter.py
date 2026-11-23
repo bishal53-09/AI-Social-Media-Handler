@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from platforms.base import MediaLimits, PlatformAdapter
+from platforms.base import Capability, MediaLimits, PlatformAdapter
 
 
 class TikTokAdapter(PlatformAdapter):
@@ -19,6 +19,11 @@ class TikTokAdapter(PlatformAdapter):
     env_vars: ClassVar[tuple[str, ...]] = (
         "TIKTOK_CLIENT_KEY",
         "TIKTOK_CLIENT_SECRET",
+    )
+    api_capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.PUBLISH, Capability.ANALYTICS})
+    engagement_notes: ClassVar[str] = (
+        "TikTok's public Content Posting/Display APIs expose basic video statistics. Comment management and "
+        "liking are not available there; they depend on restricted business/partner programs. Verify current docs."
     )
     default_limits: ClassVar[dict[str, MediaLimits]] = {
         "video": MediaLimits(

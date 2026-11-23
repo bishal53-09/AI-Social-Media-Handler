@@ -6,5 +6,5 @@
 - **Phase 3 — colour management and LUTs:** planned.
 - **Phase 4 — 360 reframing and editing execution:** planned.
 - **Phase 5 — AI review UI, subtitles, rendering/exports:** planned (AI plan generation exists in the backend).
-- **Phase 6 — publishing (Instagram, TikTok, YouTube) and analytics:** planned; state machine ready.
+- **Phase 6 — publishing, comments/interactions and analytics collection (Instagram, TikTok, YouTube):** planned. Ready: state machine, adapter contract for engagement, comment/metric storage, audit trail, post-first dashboard UI.
 - **Phase 7 — trend research, Facebook/LinkedIn/X, object storage:** planned.

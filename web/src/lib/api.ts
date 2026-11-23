@@ -1,5 +1,11 @@
 import type {
+  AnalyticsOverview,
   AppSettings,
+  Comment,
+  CommentList,
+  ContentPostCreate,
+  ContentPostDetail,
+  ContentPostList,
   DayList,
   DayRead,
   Health,
@@ -14,6 +20,7 @@ import type {
   ProjectDetail,
   ProjectList,
   ScanResult,
+  SyncReport,
 } from "@/types/api";
 
 /**
@@ -74,6 +81,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(message, response.status, code, details);
   }
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -117,5 +125,48 @@ export const api = {
       const qs = q.toString();
       return request<PostList>(`/posts${qs ? `?${qs}` : ""}`);
     },
+  },
+  contentPosts: {
+    list: (params: { project_id?: string; limit?: number } = {}) => {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
+      const qs = q.toString();
+      return request<ContentPostList>(`/content-posts${qs ? `?${qs}` : ""}`);
+    },
+    get: (id: string) => request<ContentPostDetail>(`/content-posts/${encodeURIComponent(id)}`),
+    create: (body: ContentPostCreate) => post<ContentPostDetail>("/content-posts", body),
+  },
+  engagement: {
+    comments: (postId: string) =>
+      request<CommentList>(`/posts/${encodeURIComponent(postId)}/comments?limit=500`),
+    sync: (postId: string) => post<SyncReport>(`/posts/${encodeURIComponent(postId)}/sync`),
+    reply: (postId: string, commentId: string, text: string) =>
+      post<Comment>(
+        `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/reply`,
+        { text },
+      ),
+    like: (postId: string, commentId: string, like: boolean) =>
+      post<Comment>(
+        `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/like`,
+        { like },
+      ),
+    hide: (postId: string, commentId: string, hidden: boolean) =>
+      post<Comment>(
+        `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/hide`,
+        { hidden },
+      ),
+    remove: (postId: string, commentId: string) =>
+      request<void>(
+        `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+        { method: "DELETE" },
+      ),
+    likePost: (postId: string, like: boolean) =>
+      post<void>(`/posts/${encodeURIComponent(postId)}/like`, { like }),
+  },
+  analytics: {
+    overview: (project_id?: string) =>
+      request<AnalyticsOverview>(
+        `/analytics/overview${project_id ? `?project_id=${encodeURIComponent(project_id)}` : ""}`,
+      ),
   },
 };

@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig, Settings
 from app.database.session import Database
+from app.services.content_post_service import ContentPostService
+from app.services.engagement_service import EngagementService
 from app.services.job_service import JobRunner, JobService
 from app.services.media_service import MediaService
 from app.services.post_service import PostService
@@ -58,7 +60,17 @@ def post_service(session: SessionDep) -> PostService:
     return PostService(session)
 
 
+def engagement_service(session: SessionDep, config: ConfigDep) -> EngagementService:
+    return EngagementService(session, config)
+
+
+def content_post_service(session: SessionDep, config: ConfigDep) -> ContentPostService:
+    return ContentPostService(session, config)
+
+
 ProjectServiceDep = Annotated[ProjectService, Depends(project_service)]
 MediaServiceDep = Annotated[MediaService, Depends(media_service)]
 JobServiceDep = Annotated[JobService, Depends(job_service)]
 PostServiceDep = Annotated[PostService, Depends(post_service)]
+EngagementServiceDep = Annotated[EngagementService, Depends(engagement_service)]
+ContentPostServiceDep = Annotated[ContentPostService, Depends(content_post_service)]

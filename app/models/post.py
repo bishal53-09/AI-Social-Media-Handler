@@ -10,13 +10,17 @@ from app.database.base import Base, UTCDateTime, new_id, utcnow
 
 
 class Post(Base):
-    """Persistent record of one platform post. See ``app.publishing.state``."""
+    """Persistent record of one *platform post* (one platform's copy of a ContentPost). See ``app.publishing.state``."""
 
     __tablename__ = "posts"
     __table_args__ = (Index("ix_posts_project_status", "project_id", "status"),)
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("post"))
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    #: The user-facing post this platform post belongs to (null for legacy/standalone rows).
+    content_post_id: Mapped[str | None] = mapped_column(
+        ForeignKey("content_posts.id", ondelete="CASCADE"), default=None, index=True
+    )
     platform: Mapped[str] = mapped_column(String(32))
     variant: Mapped[str | None] = mapped_column(String(32), default=None)
     account_id: Mapped[str | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), default=None)

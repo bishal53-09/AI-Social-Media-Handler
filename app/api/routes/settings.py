@@ -18,6 +18,8 @@ class PlatformInfo(BaseModel):
     api: str | None = None
     credentials_configured: bool
     publishing_implemented: bool
+    capabilities: dict[str, str] = {}
+    engagement_notes: str = ""
 
 
 class SettingsRead(BaseModel):
@@ -59,6 +61,8 @@ def read_settings(settings: SettingsDep, config: ConfigDep) -> SettingsRead:
                 api=cfg.get("api"),
                 credentials_configured=bool(cred_key and secrets.get(cred_key)),
                 publishing_implemented=bool(adapter_cls and adapter_cls.publishing_implemented),
+                capabilities=adapter_cls.capability_map() if adapter_cls else {},
+                engagement_notes=adapter_cls.engagement_notes if adapter_cls else "",
             )
         )
     return SettingsRead(

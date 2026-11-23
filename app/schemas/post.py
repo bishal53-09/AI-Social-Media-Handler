@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class PostCreate(BaseModel):
     project_id: str
+    content_post_id: str | None = None
     platform: str
     variant: str | None = None
     account_id: str | None = None
@@ -41,6 +42,7 @@ class PostRead(BaseModel):
 
     id: str
     project_id: str
+    content_post_id: str | None = None
     platform: str
     variant: str | None = None
     account_id: str | None = None

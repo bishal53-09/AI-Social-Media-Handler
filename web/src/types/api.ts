@@ -188,6 +188,8 @@ export interface PlatformInfo {
   api: string | null;
   credentials_configured: boolean;
   publishing_implemented: boolean;
+  capabilities: Partial<Record<CapabilityName, CapabilityState>>;
+  engagement_notes: string;
 }
 
 export interface AppSettings {
@@ -207,4 +209,158 @@ export interface AppSettings {
   pipeline_stages: { name: string; implemented: boolean }[];
   platforms: PlatformInfo[];
   export_presets: string[];
+}
+
+// ---- Posts, engagement and analytics ---------------------------------------------------
+
+export type CapabilityState = "implemented" | "planned" | "unavailable";
+export type CapabilityName =
+  | "publish"
+  | "analytics"
+  | "list_comments"
+  | "reply_comment"
+  | "like_comment"
+  | "hide_comment"
+  | "delete_comment"
+  | "like_post";
+
+export type Metrics = Record<string, number>;
+
+export interface PlatformPostSummary {
+  id: string;
+  platform: string;
+  platform_name: string;
+  variant: string | null;
+  status: string;
+  external_post_id: string | null;
+  external_url: string | null;
+  published_at: string | null;
+  scheduled_at: string | null;
+  error: string | null;
+  metrics: Metrics;
+  metrics_collected_at: string | null;
+  comment_count: number;
+}
+
+export interface PostAttempt {
+  attempt: number;
+  started_at: string;
+  finished_at: string | null;
+  outcome: string;
+  error: string | null;
+}
+
+export interface MetricSnapshot {
+  collected_at: string;
+  metrics: Metrics;
+}
+
+export interface EngagementAction {
+  id: string;
+  comment_external_id: string | null;
+  action: string;
+  outcome: string;
+  detail: string | null;
+  error: string | null;
+  created_at: string;
+}
+
+export interface PlatformPostDetail extends PlatformPostSummary {
+  caption: string | null;
+  hashtags: string[];
+  approved_by: string | null;
+  approved_at: string | null;
+  attempts: PostAttempt[];
+  capabilities: Partial<Record<CapabilityName, CapabilityState>>;
+  engagement_notes: string;
+  snapshots: MetricSnapshot[];
+  actions: EngagementAction[];
+}
+
+export interface ContentPostSummary {
+  id: string;
+  project_id: string;
+  title: string;
+  output_file: string | null;
+  caption: string | null;
+  hashtags: string[];
+  created_at: string;
+  platform_posts: PlatformPostSummary[];
+  totals: Metrics;
+  comment_total: number;
+}
+
+export interface ContentPostDetail extends Omit<ContentPostSummary, "platform_posts"> {
+  platform_posts: PlatformPostDetail[];
+}
+
+export interface ContentPostList {
+  items: ContentPostSummary[];
+  total: number;
+}
+
+export interface ContentPostCreate {
+  project_id: string;
+  title: string;
+  output_file: string;
+  caption?: string;
+  hashtags: string[];
+  platforms: { platform: string; variant?: string }[];
+}
+
+export interface Comment {
+  id: string;
+  post_id: string;
+  external_id: string;
+  parent_external_id: string | null;
+  author_name: string | null;
+  text: string;
+  like_count: number;
+  reply_count: number;
+  posted_at: string | null;
+  fetched_at: string;
+  is_own: boolean;
+  hidden: boolean;
+  liked_by_me: boolean;
+  removed_remotely: boolean;
+}
+
+export interface CommentList {
+  items: Comment[];
+  total: number;
+}
+
+export interface SyncPart {
+  status: "ok" | "unsupported" | "error" | "skipped";
+  count: number;
+  message: string | null;
+}
+
+export interface SyncReport {
+  post_id: string;
+  comments: SyncPart;
+  analytics: SyncPart;
+  synced_at: string;
+}
+
+export interface AnalyticsOverview {
+  published_posts: number;
+  posts_with_data: number;
+  totals: Metrics;
+  by_platform: {
+    platform: string;
+    platform_name: string;
+    published_posts: number;
+    posts_with_data: number;
+    totals: Metrics;
+  }[];
+  top_posts: {
+    content_post_id: string | null;
+    title: string;
+    platform: string;
+    platform_post_id: string;
+    external_url: string | null;
+    metrics: Metrics;
+  }[];
+  last_collected_at: string | null;
 }

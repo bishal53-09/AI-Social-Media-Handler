@@ -90,3 +90,10 @@ class AIResponseError(AppError):
 class CancelledError(AppError):
     status_code = 409
     code = "cancelled"
+
+
+class PlatformError(AppError):
+    """A social platform's API failed or rejected a request."""
+
+    status_code = 502
+    code = "platform_error"

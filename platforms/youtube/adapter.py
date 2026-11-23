@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from platforms.base import MediaLimits, PlatformAdapter
+from platforms.base import Capability, MediaLimits, PlatformAdapter
 
 
 class YouTubeAdapter(PlatformAdapter):
@@ -19,6 +19,22 @@ class YouTubeAdapter(PlatformAdapter):
     env_vars: ClassVar[tuple[str, ...]] = (
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
+    )
+    api_capabilities: ClassVar[frozenset[Capability]] = frozenset(
+        {
+            Capability.PUBLISH,
+            Capability.ANALYTICS,
+            Capability.LIST_COMMENTS,
+            Capability.REPLY_COMMENT,
+            Capability.HIDE_COMMENT,
+            Capability.DELETE_COMMENT,
+            Capability.LIKE_POST,
+        }
+    )
+    engagement_notes: ClassVar[str] = (
+        "YouTube Data API: commentThreads/comments cover listing, replying, moderation and deletion; "
+        "videos.rate covers liking a video. Liking individual comments is not offered. Verify against "
+        "current docs and quota costs before implementing."
     )
     default_limits: ClassVar[dict[str, MediaLimits]] = {
         "video": MediaLimits(

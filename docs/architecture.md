@@ -20,3 +20,14 @@ every stage is traceable (job events + sidecar JSON); human approval is the defa
 - **Deviations from the original spec tree**: `app/api/__init__.py` aggregates routers (no `api.py`);
   `app/pipeline/stages/_future.py` holds the placeholder stages instead of separate empty files; analysis output
   goes to `data/analysis/<clip>.json`; media listing routes live in `projects.py`.
+
+## Post-first data model
+
+- **Post** (`content_posts`): the user-facing unit: one video, caption and hashtags. The dashboard is organised around it.
+- **Platform post** (`posts`, with `content_post_id`): that post's copy on one platform and variant, with the publishing
+  state machine, attempts and the latest analytics.
+- `comments`, `metric_snapshots` and `engagement_actions` hang off a platform post.
+- API: `GET/POST /content-posts`, `GET /content-posts/{id}` (platforms, totals, per-platform metrics, capabilities,
+  history, audit trail); `GET /posts/{platform_post_id}/comments`; `POST /posts/{id}/sync`; comment actions
+  (`reply`, `like`, `hide`, `DELETE`) and `POST /posts/{id}/like`; `GET /analytics/overview`.
+- Totals add only additive metrics (views, likes, comments, shares, saves, watch time); reach and averages are never summed.

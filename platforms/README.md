@@ -38,3 +38,10 @@ Copy [`_template/`](_template/), implement the methods you can support, and
 register the class with `platforms.registry.register`. See
 [docs/platform-integrations.md](../docs/platform-integrations.md) for the
 publishing state machine and the reconciliation rules every adapter must honour.
+
+## Engagement capabilities
+
+Set `api_capabilities` (what the official API allows, with `engagement_notes`) and `implemented_capabilities` (what
+your code really does and is tested) on the adapter, then override the matching methods in `platforms/base.py`
+(`list_comments`, `reply_to_comment`, `like_comment`, `set_comment_hidden`, `delete_comment`, `like_post`,
+`get_analytics`). Normalise metrics to the keys in `METRIC_KEYS`. Raise on failure; never return fake success.
