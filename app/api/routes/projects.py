@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import date as date_type
+from pathlib import Path
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
 from app.api.deps import MediaServiceDep, ProjectServiceDep
-from app.schemas.media import MediaList, ScanRequest, ScanResult
+from app.core.exceptions import NotFoundError
+from app.core.paths import safe_join
+from app.schemas.media import MediaAssetRead, MediaList, MediaRename, ScanRequest, ScanResult
 from app.schemas.project import (
     DayList,
     DayRead,
@@ -81,11 +85,14 @@ def list_media(
     kind: str | None = Query(default=None, pattern="^(video|image)$"),
     stage: str | None = Query(default=None, max_length=32),
     day: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    postable: bool = Query(default=False, description="Only files that can be attached to a post."),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> MediaList:
     svc.get(project_id)
-    items, total = media.list_assets(project_id, kind=kind, stage=stage, day=day, limit=limit, offset=offset)
+    items, total = media.list_assets(
+        project_id, kind=kind, stage=stage, day=day, postable=postable, limit=limit, offset=offset
+    )
     return MediaList(items=items, total=total, limit=limit, offset=offset)  # type: ignore[arg-type]
 
 
@@ -97,3 +104,37 @@ def scan_media(
     runs as a job (``POST /jobs``)."""
     project = svc.get(project_id)
     return media.scan(project, probe=(body.probe if body else True))
+
+
+@router.get("/{project_id}/media/{asset_id}/thumbnail")
+def media_thumbnail(project_id: str, asset_id: str, svc: ProjectServiceDep, media: MediaServiceDep) -> FileResponse:
+    """The generated thumbnail of an indexed media file (for pickers)."""
+    project = svc.get(project_id)
+    asset = media.get_asset(project_id, asset_id)
+    if asset is None or not asset.thumbnail_path:
+        raise NotFoundError("No thumbnail for this media file.")
+    path = safe_join(Path(project.path).resolve(), asset.thumbnail_path)
+    if not path.is_file():
+        raise NotFoundError("No thumbnail for this media file.")
+    return FileResponse(path)
+
+
+@router.post("/{project_id}/media/upload", response_model=list[MediaAssetRead], status_code=status.HTTP_201_CREATED)
+def upload_media(
+    project_id: str, svc: ProjectServiceDep, media: MediaServiceDep, files: list[UploadFile] = File(...)
+) -> list[MediaAssetRead]:
+    """Copy chosen files into the project's ``media/raw/<today>/`` folder and index them.
+
+    Existing files are never overwritten (409). Only configured video/image types are accepted.
+    """
+    project = svc.get(project_id)
+    return [MediaAssetRead.model_validate(media.add_upload(project, f.filename or "upload", f.file)) for f in files]
+
+
+@router.patch("/{project_id}/media/{asset_id}", response_model=MediaAssetRead)
+def rename_media(
+    project_id: str, asset_id: str, body: MediaRename, svc: ProjectServiceDep, media: MediaServiceDep
+) -> MediaAssetRead:
+    """Change the display name of a media file. The file on disk is not renamed or modified."""
+    svc.get(project_id)
+    return MediaAssetRead.model_validate(media.rename(project_id, asset_id, body.display_name))

@@ -76,7 +76,13 @@ export default function MediaPage() {
       ) : (
         <Card className="py-0">
           <CardContent className="px-0">
-            <MediaTable items={media.data.items} />
+            <MediaTable
+              items={media.data.items}
+              onRename={async (item, name) => {
+                await api.projects.renameMedia(item.project_id, item.id, name);
+                media.reload();
+              }}
+            />
             <div className="border-t px-3 py-2 text-xs text-muted-foreground">
               {media.data.total} file{media.data.total === 1 ? "" : "s"} · {formatBytes(total)}
             </div>

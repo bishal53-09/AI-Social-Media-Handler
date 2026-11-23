@@ -85,6 +85,9 @@ export interface MediaAsset {
   id: string;
   project_id: string;
   relative_path: string;
+  /** Display name: the chosen name, else the file name. */
+  name: string;
+  display_name: string | null;
   kind: "video" | "image";
   stage: string;
   day: string | null;
@@ -299,6 +302,7 @@ export interface ContentPostSummary {
   project_id: string;
   title: string;
   output_file: string | null;
+  media_files: string[];
   caption: string | null;
   hashtags: string[];
   created_at: string;
@@ -319,7 +323,8 @@ export interface ContentPostList {
 export interface ContentPostCreate {
   project_id: string;
   title: string;
-  output_file: string;
+  /** Project-relative files picked from the project's media (first is primary). */
+  media_files: string[];
   caption?: string;
   hashtags: string[];
   platforms: { platform: string; variant?: string }[];

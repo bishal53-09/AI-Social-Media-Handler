@@ -127,7 +127,7 @@ class MediaConfig(BaseModel):
     ]
     image_extensions: list[str] = [".jpg", ".jpeg", ".png", ".dng", ".heic"]
     max_file_size_gb: float = 200
-    scan_folders: list[str] = ["media/raw", "media/stitched"]
+    scan_folders: list[str] = ["media/raw", "media/stitched", "media/processed", "media/ready"]
 
     @property
     def max_file_size_bytes(self) -> int:

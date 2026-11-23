@@ -13,6 +13,7 @@ class PostCreate(BaseModel):
     variant: str | None = None
     account_id: str | None = None
     output_file: str = Field(min_length=1, max_length=1024)
+    media_files: list[str] = Field(default_factory=list, max_length=10)
     caption: str | None = Field(default=None, max_length=5000)
     hashtags: list[str] = Field(default_factory=list, max_length=60)
     scheduled_at: datetime | None = None
@@ -47,6 +48,7 @@ class PostRead(BaseModel):
     variant: str | None = None
     account_id: str | None = None
     output_file: str
+    media_files: list[str] = Field(default_factory=list)
     caption: str | None = None
     hashtags: list[str]
     scheduled_at: datetime | None = None

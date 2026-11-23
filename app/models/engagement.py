@@ -22,6 +22,8 @@ class ContentPost(Base):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     output_file: Mapped[str | None] = mapped_column(String(1024), default=None)
+    #: All media files of the post (project-relative); ``output_file`` is the first.
+    media_files: Mapped[list[str]] = mapped_column(JSON, default=list)
     caption: Mapped[str | None] = mapped_column(Text, default=None)
     hashtags: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

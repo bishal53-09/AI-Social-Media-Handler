@@ -5,16 +5,23 @@ from __future__ import annotations
 import os
 import re
 from datetime import datetime
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import Any, BinaryIO
 
 from PIL import Image
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig
-from app.core.exceptions import AppError, DependencyMissingError
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    DependencyMissingError,
+    NotFoundError,
+    ValidationFailedError,
+)
 from app.core.paths import safe_join, to_project_relative
+from app.database.base import new_id
 from app.models import MediaAsset, Project
 from app.pipeline.ffmpeg import check_binary, probe_file
 from app.pipeline.sidecar import clip_id_for
@@ -224,10 +231,13 @@ class MediaService:
         kind: str | None = None,
         stage: str | None = None,
         day: str | None = None,
+        postable: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[MediaAsset], int]:
         q = select(MediaAsset).where(MediaAsset.project_id == project_id)
+        if postable:  # picker data: real files you can attach to a post, not generated helpers
+            q = q.where(MediaAsset.missing.is_(False), MediaAsset.stage.notin_(("proxy", "thumbnail")))
         if kind:
             q = q.where(MediaAsset.kind == kind)
         if stage:
@@ -241,6 +251,71 @@ class MediaService:
             )
         )
         return items, int(total)
+
+    def rename(self, project_id: str, asset_id: str, display_name: str | None) -> MediaAsset:
+        asset = self.get_asset(project_id, asset_id)
+        if asset is None:
+            raise NotFoundError("Media file not found.")
+        name = (display_name or "").strip()
+        if any(ord(c) < 32 for c in name):
+            raise ValidationFailedError("Name must not contain control characters.")
+        asset.display_name = name or None
+        self.session.commit()
+        return asset
+
+    def add_upload(self, project: Project, filename: str, stream: BinaryIO) -> MediaAsset:
+        """Copy an uploaded file into ``media/raw/<today>/`` and index it. Never overwrites."""
+        cfg = self.config.media
+        base = PurePosixPath(filename.replace("\\", "/")).name
+        stem, dot, ext = base.rpartition(".")
+        ext = f".{ext.lower()}" if dot else ""
+        stem = re.sub(r"[^\w.\- ]+", "_", stem if dot else base).strip(" .") or "upload"
+        stem = stem[:120]
+        allowed = {e.lower() for e in (*cfg.video_extensions, *cfg.image_extensions)}
+        if ext not in allowed:
+            raise ValidationFailedError(
+                f"'{ext or filename}' is not a supported video or image type.",
+                details={"allowed": sorted(allowed)},
+            )
+        root = Path(project.path).resolve()
+        folder = safe_join(root, "media/raw", datetime.now().strftime("%Y-%m-%d"))
+        target = safe_join(folder, f"{stem}{ext}")
+        if target.exists():
+            raise ConflictError(f"'{target.name}' already exists in this project. Existing media is never overwritten.")
+        folder.mkdir(parents=True, exist_ok=True)
+        tmp = folder / f".upload-{new_id('tmp')}"
+        written = 0
+        try:
+            with tmp.open("wb") as out:
+                while chunk := stream.read(1024 * 1024):
+                    written += len(chunk)
+                    if written > cfg.max_file_size_bytes:
+                        raise ValidationFailedError(f"File is larger than the {cfg.max_file_size_gb:g} GB limit.")
+                    out.write(chunk)
+            if written == 0:
+                raise ValidationFailedError("The uploaded file is empty.")
+            try:
+                os.link(tmp, target)  # atomic, fails if it appeared meanwhile: never overwrites
+            except FileExistsError as exc:
+                raise ConflictError(f"'{target.name}' already exists in this project.") from exc
+            except OSError:  # filesystem without hard links
+                tmp.rename(target)
+        finally:
+            tmp.unlink(missing_ok=True)
+        result = self.scan(project, probe=True)
+        rel = to_project_relative(target, root)
+        asset = self.session.scalar(
+            select(MediaAsset).where(MediaAsset.project_id == project.id, MediaAsset.relative_path == rel)
+        )
+        if asset is None:
+            raise ValidationFailedError(
+                "The file was saved but could not be indexed.", details={"warnings": result.warnings}
+            )
+        return asset
+
+    def get_asset(self, project_id: str, asset_id: str) -> MediaAsset | None:
+        asset = self.session.get(MediaAsset, asset_id)
+        return asset if asset is not None and asset.project_id == project_id else None
 
     # -- day metadata --------------------------------------------------------
 

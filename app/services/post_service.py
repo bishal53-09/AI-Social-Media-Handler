@@ -67,10 +67,13 @@ class PostService:
     def create_draft(self, data: PostCreate) -> Post:
         if self.session.get(Project, data.project_id) is None:
             raise NotFoundError(f"Project '{data.project_id}' not found.")
-        if data.output_file.startswith(("/", "~")) or ".." in data.output_file.split("/"):
-            raise ValidationFailedError("output_file must be a path relative to the project.")
+        files = data.media_files or [data.output_file]
+        for f in files:
+            if f.startswith(("/", "~")) or ".." in f.split("/"):
+                raise ValidationFailedError("Media files must be paths relative to the project.")
         tags = [t.lstrip("#") for t in data.hashtags]
-        post = Post(**data.model_dump(exclude={"hashtags"}), hashtags=tags, status=PostStatus.DRAFT)
+        fields = data.model_dump(exclude={"hashtags", "media_files", "output_file"})
+        post = Post(**fields, output_file=files[0], media_files=files, hashtags=tags, status=PostStatus.DRAFT)
         self.session.add(post)
         self.session.commit()
         return post

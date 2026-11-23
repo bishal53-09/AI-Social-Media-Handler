@@ -34,4 +34,4 @@ media:
   max_file_size_gb: 200
   # Folders (relative to the project) scanned for source media. media/raw holds
   # video from any device or app; media/stitched is only for 360 exports.
-  scan_folders: ["media/raw", "media/stitched"]
+  scan_folders: ["media/raw", "media/stitched", "media/processed", "media/ready"]

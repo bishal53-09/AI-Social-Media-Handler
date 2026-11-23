@@ -269,7 +269,12 @@ export default function PostDetailPage() {
     <>
       <PageHeader
         title={p.title}
-        description={[p.output_file, p.caption].filter(Boolean).join(" · ")}
+        description={[
+          p.media_files.length > 1 ? `${p.media_files.length} media files` : p.output_file,
+          p.caption,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <Button asChild variant="ghost" size="sm">
             <Link href="/posts">

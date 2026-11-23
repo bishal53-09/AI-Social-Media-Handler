@@ -55,6 +55,8 @@ class MediaLimits:
     aspect_ratios: tuple[str, ...] = ()
     max_file_size_mb: float | None = None
     containers: tuple[str, ...] = ()
+    #: How many media files one post of this variant may contain.
+    max_files: int = 1
 
     @classmethod
     def from_config(cls, cfg: dict[str, Any]) -> MediaLimits:
@@ -64,6 +66,7 @@ class MediaLimits:
             aspect_ratios=tuple(cfg.get("aspect_ratios", ())),
             max_file_size_mb=cfg.get("max_file_size_mb"),
             containers=tuple(cfg.get("containers", ())),
+            max_files=int(cfg.get("max_files", 1)),
         )
 
 

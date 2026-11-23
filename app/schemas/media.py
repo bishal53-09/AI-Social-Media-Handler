@@ -12,6 +12,9 @@ class MediaAssetRead(BaseModel):
     id: str
     project_id: str
     relative_path: str
+    #: Display name: the chosen name, else the file name.
+    name: str
+    display_name: str | None = None
     kind: str
     stage: str
     day: str | None = None
@@ -50,3 +53,8 @@ class ScanResult(BaseModel):
     probe_failed: int = 0
     days_written: int = 0
     warnings: list[str] = Field(default_factory=list)
+
+
+class MediaRename(BaseModel):
+    #: ``null`` or blank resets to the file name. Only the label changes; the file is untouched.
+    display_name: str | None = Field(default=None, max_length=200)

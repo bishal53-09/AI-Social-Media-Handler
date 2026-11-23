@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig
 from app.core.exceptions import NotFoundError, ValidationFailedError
-from app.models import Comment, ContentPost, Post, Project
+from app.models import Comment, ContentPost, MediaAsset, Post, Project
 from app.schemas.engagement import (
     AnalyticsOverview,
     ContentPostCreate,
@@ -60,6 +60,8 @@ class ContentPostService:
     def create(self, data: ContentPostCreate) -> ContentPost:
         if self.session.get(Project, data.project_id) is None:
             raise NotFoundError(f"Project '{data.project_id}' not found.")
+        files = data.files
+        self._check_media(data.project_id, files, explicit=bool(data.media_files))
         registry = get_registry()
         seen: set[tuple[str, str | None]] = set()
         for target in data.platforms:
@@ -79,11 +81,20 @@ class ContentPostService:
                     f"{adapter_cls.display_name} has no variant '{target.variant}'.",
                     details={"variants": sorted(variants)},
                 )
+            allowed = adapter_cls(cfg).limits_for(target.variant).max_files
+            if len(files) > allowed:
+                label = f"{adapter_cls.display_name}" + (f" {target.variant}" if target.variant else "")
+                raise ValidationFailedError(
+                    f"{label} accepts {allowed} media file{'s' if allowed != 1 else ''} per post; "
+                    f"{len(files)} selected.",
+                    details={"platform": target.platform, "variant": target.variant, "max_files": allowed},
+                )
         tags = [t.lstrip("#") for t in data.hashtags]
         content = ContentPost(
             project_id=data.project_id,
             title=data.title,
-            output_file=data.output_file,
+            output_file=files[0],
+            media_files=files,
             caption=data.caption,
             hashtags=tags,
         )
@@ -98,7 +109,8 @@ class ContentPostService:
                         content_post_id=content.id,
                         platform=target.platform,
                         variant=target.variant,
-                        output_file=data.output_file,
+                        output_file=files[0],
+                        media_files=files,
                         caption=data.caption,
                         hashtags=tags,
                         scheduled_at=data.scheduled_at,
@@ -108,6 +120,29 @@ class ContentPostService:
             self.session.rollback()
             raise
         return content
+
+    def _check_media(self, project_id: str, files: list[str], *, explicit: bool) -> None:
+        for f in files:
+            if f.startswith(("/", "~")) or ".." in f.split("/"):
+                raise ValidationFailedError("Media files must be paths relative to the project.")
+        if not explicit:  # legacy single ``output_file``: path rules only
+            return
+        found = {
+            a.relative_path
+            for a in self.session.scalars(
+                select(MediaAsset).where(
+                    MediaAsset.project_id == project_id,
+                    MediaAsset.relative_path.in_(files),
+                    MediaAsset.missing.is_(False),
+                )
+            )
+        }
+        unknown = [f for f in files if f not in found]
+        if unknown:
+            raise ValidationFailedError(
+                "Some selected media is not in the project's media index. Rescan media and pick again.",
+                details={"unknown": unknown},
+            )
 
     # -- reads ----------------------------------------------------------------------
 
@@ -180,6 +215,7 @@ class ContentPostService:
             project_id=content.project_id,
             title=content.title,
             output_file=content.output_file,
+            media_files=list(content.media_files or ([content.output_file] if content.output_file else [])),
             caption=content.caption,
             hashtags=list(content.hashtags or []),
             created_at=content.created_at,

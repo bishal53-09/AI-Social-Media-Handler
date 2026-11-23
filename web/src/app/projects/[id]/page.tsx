@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CalendarDays, Cog, Film, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { CalendarDays, Cog, Film, RefreshCw, Upload } from "lucide-react";
+import { useRef, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { hasActiveJob, JobTable } from "@/components/job-table";
@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { api, ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/utils";
-import type { ScanResult } from "@/types/api";
+import type { MediaAsset, ScanResult } from "@/types/api";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +28,8 @@ export default function ProjectDetailPage() {
     pollMs: (d) => (hasActiveJob(d?.items) ? 1500 : null),
   });
 
-  const [busy, setBusy] = useState<"scan" | "process" | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"scan" | "process" | "upload" | null>(null);
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -45,6 +46,28 @@ export default function ProjectDetailPage() {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    setBusy("upload");
+    setActionError(null);
+    try {
+      await api.projects.uploadMedia(id, Array.from(files));
+      project.reload();
+      media.reload();
+      days.reload();
+    } catch (e) {
+      setActionError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(null);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  async function rename(item: MediaAsset, name: string | null) {
+    await api.projects.renameMedia(id, item.id, name);
+    media.reload();
   }
 
   async function runProcess() {
@@ -78,6 +101,21 @@ export default function ProjectDetailPage() {
         description={p?.description ?? undefined}
         actions={
           <>
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              hidden
+              accept="video/*,image/*,.mkv,.mts,.m2ts,.insv,.osv,.dng,.heic"
+              onChange={(e) => upload(e.target.files)}
+            />
+            <Button
+              size="sm"
+              onClick={() => fileInput.current?.click()}
+              disabled={!p || busy !== null}
+            >
+              <Upload /> {busy === "upload" ? "Adding…" : "Add media"}
+            </Button>
             <Button variant="outline" size="sm" onClick={runScan} disabled={!p || busy !== null}>
               <RefreshCw className={busy === "scan" ? "animate-spin" : ""} />
               {busy === "scan" ? "Scanning…" : "Scan media"}
@@ -137,8 +175,12 @@ export default function ProjectDetailPage() {
                 <dd className="font-mono break-all">{p.path}</dd>
                 <dt className="text-muted-foreground">Project ID</dt>
                 <dd className="font-mono">{p.id}</dd>
-                <dt className="text-muted-foreground">Default camera</dt>
-                <dd>{p.settings?.default_camera ?? "–"}</dd>
+                {p.settings?.default_camera ? (
+                  <>
+                    <dt className="text-muted-foreground">Default camera</dt>
+                    <dd>{p.settings.default_camera}</dd>
+                  </>
+                ) : null}
                 <dt className="text-muted-foreground">Created</dt>
                 <dd>{formatDateTime(p.created_at)}</dd>
               </dl>
@@ -169,9 +211,9 @@ export default function ProjectDetailPage() {
           <div>
             <CardTitle>Media inventory</CardTitle>
             <CardDescription>
-              Originals are read-only. Put videos from any phone, camera or app in{" "}
-              <code className="font-mono">media/raw/</code> (date folders are optional). Only 360
-              footage uses <code className="font-mono">media/stitched/</code>.
+              Use “Add media” to copy videos from any phone, camera or app into{" "}
+              <code className="font-mono">media/raw/</code>. Originals are never modified or
+              overwritten, and renaming only changes the name shown here.
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">
@@ -190,11 +232,11 @@ export default function ProjectDetailPage() {
               <EmptyState
                 icon={Film}
                 title="No media indexed"
-                description="Copy footage into the project folder, then click “Scan media”."
+                description="Click “Add media” to choose videos or photos from your computer."
               />
             </div>
           ) : (
-            <MediaTable items={media.data.items} />
+            <MediaTable items={media.data.items} onRename={rename} />
           )}
         </CardContent>
       </Card>

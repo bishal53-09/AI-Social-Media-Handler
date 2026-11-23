@@ -37,6 +37,8 @@ class MediaAsset(Base):
     # flat (any ordinary video) | 360 | 360-stitched | unknown (not probed yet)
     media_type: Mapped[str] = mapped_column(String(16), default="unknown")
     camera: Mapped[str | None] = mapped_column(String(100), default=None)
+    #: User-chosen name shown in the UI. The file on disk is never renamed.
+    display_name: Mapped[str | None] = mapped_column(String(200), default=None)
     probe: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
     probe_error: Mapped[str | None] = mapped_column(String(2000), default=None)
     thumbnail_path: Mapped[str | None] = mapped_column(String(1024), default=None)
@@ -47,3 +49,8 @@ class MediaAsset(Base):
     missing: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+    @property
+    def name(self) -> str:
+        """What to show people: the chosen name, else the file name."""
+        return self.display_name or self.relative_path.rsplit("/", 1)[-1]

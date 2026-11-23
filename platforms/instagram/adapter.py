@@ -42,4 +42,9 @@ class InstagramAdapter(PlatformAdapter):
             max_file_size_mb=1024,
             containers=("mp4", "mov"),
         ),
+        "carousel": MediaLimits(
+            max_file_size_mb=1024,
+            containers=("mp4", "mov", "jpg", "jpeg", "png"),
+            max_files=10,
+        ),
     }

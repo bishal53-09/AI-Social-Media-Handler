@@ -13,6 +13,7 @@ import type {
   JobCreate,
   JobDetail,
   JobList,
+  MediaAsset,
   MediaList,
   PostList,
   Project,
@@ -50,7 +51,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_URL}/api/v1${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...init?.headers,
+      },
       cache: "no-store",
     });
   } catch {
@@ -101,12 +105,30 @@ export const api = {
     days: (id: string) => request<DayList>(`/projects/${encodeURIComponent(id)}/days`),
     day: (id: string, date: string) =>
       request<DayRead>(`/projects/${encodeURIComponent(id)}/days/${date}`),
-    media: (id: string, params: { stage?: string; kind?: string; limit?: number } = {}) => {
+    media: (
+      id: string,
+      params: { stage?: string; kind?: string; limit?: number; postable?: boolean } = {},
+    ) => {
       const q = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
       const qs = q.toString();
       return request<MediaList>(`/projects/${encodeURIComponent(id)}/media${qs ? `?${qs}` : ""}`);
     },
+    uploadMedia: (id: string, files: File[]) => {
+      const form = new FormData();
+      for (const f of files) form.append("files", f);
+      return request<MediaAsset[]>(`/projects/${encodeURIComponent(id)}/media/upload`, {
+        method: "POST",
+        body: form,
+      });
+    },
+    renameMedia: (id: string, assetId: string, displayName: string | null) =>
+      request<MediaAsset>(
+        `/projects/${encodeURIComponent(id)}/media/${encodeURIComponent(assetId)}`,
+        { method: "PATCH", body: JSON.stringify({ display_name: displayName }) },
+      ),
+    thumbnailUrl: (id: string, assetId: string) =>
+      `${API_URL}/api/v1/projects/${encodeURIComponent(id)}/media/${encodeURIComponent(assetId)}/thumbnail`,
     scan: (id: string, probe = true) =>
       post<ScanResult>(`/projects/${encodeURIComponent(id)}/media/scan`, { probe }),
   },

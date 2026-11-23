@@ -363,3 +363,120 @@ def test_settings_lists_platform_capabilities(client: TestClient) -> None:
     assert platforms["tiktok"]["capabilities"]["list_comments"] == "unavailable"
     assert platforms["instagram"]["capabilities"]["reply_comment"] == "planned"
     assert all(v != "implemented" for p in platforms.values() for v in p["capabilities"].values())
+
+
+# --- multi-media posts and picker data ---------------------------------------------------------------
+
+
+def _index_media(client: TestClient, project: dict[str, Any], names: list[str]) -> list[str]:
+    """Put placeholder files in the project and index them (no ffprobe needed)."""
+    from pathlib import Path
+
+    root = Path(project["path"])
+    for n in names:
+        f = root / n
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"x")
+    client.post(f"{V1}/projects/{project['id']}/media/scan", json={"probe": False})
+    return names
+
+
+def test_picker_data_lists_postable_media_only(client: TestClient) -> None:
+    project = _project(client)
+    _index_media(client, project, ["media/raw/2026-11-23/a.mp4", "media/proxies/a.mp4"])
+    everything = client.get(f"{V1}/projects/{project['id']}/media").json()["items"]
+    postable = client.get(f"{V1}/projects/{project['id']}/media", params={"postable": "true"}).json()["items"]
+    assert {m["stage"] for m in postable}.isdisjoint({"proxy", "thumbnail"})
+    assert any(m["relative_path"] == "media/raw/2026-11-23/a.mp4" for m in postable)
+    assert len(postable) <= len(everything)
+    assert client.get(f"{V1}/projects/{project['id']}/media/nope/thumbnail").status_code == 404
+
+
+def test_post_with_several_media_files(client: TestClient) -> None:
+    project = _project(client)
+    files = _index_media(client, project, ["media/raw/a.mp4", "media/raw/b.mp4"])
+    body = {
+        "project_id": project["id"],
+        "title": "Carousel",
+        "media_files": files,
+        "platforms": [{"platform": "instagram", "variant": "carousel"}],
+    }
+    r = client.post(f"{V1}/content-posts", json=body)
+    assert r.status_code == 201, r.text
+    post = r.json()
+    assert post["media_files"] == files and post["output_file"] == files[0]
+    detail = client.get(f"{V1}/content-posts/{post['id']}").json()
+    assert detail["media_files"] == files
+
+
+def test_multiple_media_rejected_where_a_platform_takes_one(client: TestClient) -> None:
+    project = _project(client)
+    files = _index_media(client, project, ["media/raw/a.mp4", "media/raw/b.mp4"])
+    body = {"project_id": project["id"], "title": "t", "media_files": files}
+    r = client.post(f"{V1}/content-posts", json={**body, "platforms": [{"platform": "youtube", "variant": "shorts"}]})
+    assert r.status_code == 422 and "1 media file" in r.text
+    r = client.post(f"{V1}/content-posts", json={**body, "platforms": [{"platform": "instagram", "variant": "reels"}]})
+    assert r.status_code == 422
+    assert client.get(f"{V1}/content-posts").json()["total"] == 0
+
+
+def test_selected_media_must_be_indexed_and_unique(client: TestClient) -> None:
+    project = _project(client)
+    _index_media(client, project, ["media/raw/a.mp4"])
+    base = {"project_id": project["id"], "title": "t", "platforms": [{"platform": "youtube"}]}
+    assert client.post(f"{V1}/content-posts", json={**base, "media_files": ["media/raw/ghost.mp4"]}).status_code == 422
+    assert client.post(f"{V1}/content-posts", json={**base, "media_files": ["../x.mp4"]}).status_code == 422
+    dup = ["media/raw/a.mp4", "media/raw/a.mp4"]
+    assert client.post(f"{V1}/content-posts", json={**base, "media_files": dup}).status_code == 422
+    assert client.post(f"{V1}/content-posts", json=base).status_code == 422  # nothing selected
+    ok = client.post(f"{V1}/content-posts", json={**base, "media_files": ["media/raw/a.mp4"]})
+    assert ok.status_code == 201
+
+
+# --- upload and rename ---------------------------------------------------------------------------------
+
+
+def test_upload_copies_into_raw_and_never_overwrites(client: TestClient) -> None:
+    from pathlib import Path
+
+    project = _project(client)
+    url = f"{V1}/projects/{project['id']}/media/upload"
+    r = client.post(url, files=[("files", ("../../My Clip!.MP4", b"data", "video/mp4"))])
+    assert r.status_code == 201, r.text
+    [asset] = r.json()
+    assert asset["relative_path"].startswith("media/raw/") and asset["stage"] == "raw"
+    assert asset["name"] == "My Clip_.mp4" and ".." not in asset["relative_path"]
+    assert (Path(project["path"]) / asset["relative_path"]).read_bytes() == b"data"
+    again = client.post(url, files=[("files", ("My Clip!.mp4", b"other", "video/mp4"))])
+    assert again.status_code == 409
+    assert (Path(project["path"]) / asset["relative_path"]).read_bytes() == b"data"
+    assert client.post(url, files=[("files", ("notes.exe", b"x", "application/octet-stream"))]).status_code == 422
+    assert client.post(url, files=[("files", ("empty.mp4", b"", "video/mp4"))]).status_code == 422
+
+
+def test_rename_changes_only_the_display_name(client: TestClient) -> None:
+    from pathlib import Path
+
+    project = _project(client)
+    [asset] = client.post(
+        f"{V1}/projects/{project['id']}/media/upload", files=[("files", ("a.mp4", b"x", "video/mp4"))]
+    ).json()
+    url = f"{V1}/projects/{project['id']}/media/{asset['id']}"
+    renamed = client.patch(url, json={"display_name": "  Sunset ride final  "}).json()
+    assert renamed["name"] == "Sunset ride final" and renamed["relative_path"] == asset["relative_path"]
+    assert (Path(project["path"]) / asset["relative_path"]).exists()
+    client.post(f"{V1}/projects/{project['id']}/media/scan", json={"probe": False})  # rescan keeps the name
+    listed = client.get(f"{V1}/projects/{project['id']}/media").json()["items"]
+    assert any(m["name"] == "Sunset ride final" for m in listed)
+    assert client.patch(url, json={"display_name": ""}).json()["name"] == "a.mp4"
+    assert client.patch(f"{V1}/projects/{project['id']}/media/nope", json={"display_name": "x"}).status_code == 404
+
+
+def test_processed_and_ready_files_are_indexed_for_posts(client: TestClient) -> None:
+    project = _project(client)
+    _index_media(client, project, ["media/processed/cut.mp4", "media/ready/final.mp4"])
+    stages = {
+        m["stage"]
+        for m in client.get(f"{V1}/projects/{project['id']}/media", params={"postable": "true"}).json()["items"]
+    }
+    assert {"processed", "ready"} <= stages

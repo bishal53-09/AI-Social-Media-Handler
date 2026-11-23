@@ -25,6 +25,7 @@ class Post(Base):
     variant: Mapped[str | None] = mapped_column(String(32), default=None)
     account_id: Mapped[str | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), default=None)
     output_file: Mapped[str] = mapped_column(String(1024))
+    media_files: Mapped[list[str]] = mapped_column(JSON, default=list)
     caption: Mapped[str | None] = mapped_column(Text, default=None)
     hashtags: Mapped[list[str]] = mapped_column(JSON, default=list)
     scheduled_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

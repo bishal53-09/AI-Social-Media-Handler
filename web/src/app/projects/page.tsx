@@ -22,7 +22,6 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
   const [name, setName] = useState("");
   const [path, setPath] = useState("");
   const [description, setDescription] = useState("");
-  const [camera, setCamera] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +34,6 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
         name: name.trim(),
         path: path.trim() || undefined,
         description: description.trim() || undefined,
-        default_camera: camera.trim() || undefined,
       });
       router.push(`/projects/${project.id}`);
     } catch (err) {
@@ -49,8 +47,8 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
       <CardHeader>
         <CardTitle>New project</CardTitle>
         <CardDescription>
-          Creates the folder structure and <code className="font-mono">project.json</code>. Existing
-          files are never overwritten.
+          Creates the project. Add your videos afterwards from the project page. Existing files are
+          never overwritten.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,28 +64,26 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
               placeholder="My Travel Project"
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="camera">Default camera</Label>
-            <Input
-              id="camera"
-              value={camera}
-              onChange={(e) => setCamera(e.target.value)}
-              placeholder="Optional, e.g. iPhone 16"
-            />
-          </div>
-          <div className="grid gap-1.5 sm:col-span-2">
-            <Label htmlFor="path">Location</Label>
-            <Input
-              id="path"
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              placeholder={mediaRoot ? `${mediaRoot}/<project-name> (default)` : "default location"}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Must be inside your configured project roots. Keep projects outside the Git
-              repository.
-            </p>
-          </div>
+          <details className="sm:col-span-2">
+            <summary className="cursor-pointer text-xs text-muted-foreground">
+              Advanced: store this project somewhere else
+            </summary>
+            <div className="mt-2 grid gap-1.5">
+              <Label htmlFor="path">Location</Label>
+              <Input
+                id="path"
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                placeholder={
+                  mediaRoot ? `${mediaRoot}/<project-name> (default)` : "default location"
+                }
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Must be inside your configured project roots. Keep projects outside the Git
+                repository.
+              </p>
+            </div>
+          </details>
           <div className="grid gap-1.5 sm:col-span-2">
             <Label htmlFor="description">Description</Label>
             <Textarea

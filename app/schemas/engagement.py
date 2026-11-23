@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.post import PostAttemptRead
 
@@ -114,7 +114,10 @@ class PlatformTarget(BaseModel):
 class ContentPostCreate(BaseModel):
     project_id: str
     title: str = Field(min_length=1, max_length=200)
-    output_file: str = Field(min_length=1, max_length=1024)
+    #: Project-relative media files chosen from the project's media index (first = primary).
+    media_files: list[str] = Field(default_factory=list, max_length=10)
+    #: Deprecated single-file form; equivalent to ``media_files=[output_file]``.
+    output_file: str | None = Field(default=None, min_length=1, max_length=1024)
     caption: str | None = Field(default=None, max_length=5000)
     hashtags: list[str] = Field(default_factory=list, max_length=60)
     platforms: list[PlatformTarget] = Field(min_length=1, max_length=20)
@@ -135,12 +138,27 @@ class ContentPostCreate(BaseModel):
             raise ValueError("scheduled_at must include a timezone offset (ISO 8601).")
         return v
 
+    @model_validator(mode="after")
+    def _files(self) -> ContentPostCreate:
+        if not self.media_files and not self.output_file:
+            raise ValueError("Select at least one media file.")
+        if len(set(self.media_files)) != len(self.media_files):
+            raise ValueError("media_files must not repeat a file.")
+        if self.media_files and self.output_file and self.output_file != self.media_files[0]:
+            raise ValueError("output_file must equal the first media file; send only media_files.")
+        return self
+
+    @property
+    def files(self) -> list[str]:
+        return list(self.media_files) or ([self.output_file] if self.output_file else [])
+
 
 class ContentPostSummary(BaseModel):
     id: str
     project_id: str
     title: str
     output_file: str | None = None
+    media_files: list[str] = Field(default_factory=list)
     caption: str | None = None
     hashtags: list[str] = Field(default_factory=list)
     created_at: datetime
