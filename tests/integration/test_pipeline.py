@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -39,6 +40,10 @@ def project(session: Session, settings: Settings, config: AppConfig) -> Project:
     root = Path(p.path)
     make_video(root / "media/stitched/pano.mp4", size="640x320", seconds=2)
     make_video(root / "media/raw/2026-11-23/flat.mp4", size="640x360", seconds=2, audio=False)
+    # A file outside a dated folder takes its day from its modification time. Pin that time to the
+    # same day as the dated folder so the tests do not depend on the date they are run.
+    pinned = datetime(2026, 11, 23, 12, 0).timestamp()
+    os.utime(root / "media/stitched/pano.mp4", (pinned, pinned))
     return p
 
 
