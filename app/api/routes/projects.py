@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import mimetypes
 from datetime import date as date_type
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, File, Query, UploadFile, status
 from fastapi.responses import FileResponse
@@ -20,15 +22,23 @@ from app.schemas.project import (
     ProjectRead,
     ProjectSettings,
 )
+from app.services.listing import SortOrder
 from app.tracking.repository import validate_day_string
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.get("", response_model=ProjectList)
-def list_projects(svc: ProjectServiceDep) -> ProjectList:
-    items = svc.list_projects()
-    return ProjectList(items=[ProjectRead.model_validate(p) for p in items], total=len(items))
+def list_projects(
+    svc: ProjectServiceDep,
+    q: str | None = Query(default=None, max_length=100, description="Search in name and description."),
+    sort: Literal["name", "created", "updated"] | None = None,
+    order: SortOrder = "desc",
+    limit: int = Query(default=200, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> ProjectList:
+    items, total = svc.list_projects(q=q, sort=sort, order=order, limit=limit, offset=offset)
+    return ProjectList(items=[ProjectRead.model_validate(p) for p in items], total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
@@ -86,12 +96,30 @@ def list_media(
     stage: str | None = Query(default=None, max_length=32),
     day: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     postable: bool = Query(default=False, description="Only files that can be attached to a post."),
+    q: str | None = Query(default=None, max_length=100, description="Search in file name, path and display name."),
+    media_type: str | None = Query(default=None, pattern="^(flat|360|360-stitched|unknown)$"),
+    day_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    day_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    sort: Literal["name", "day", "size", "added"] | None = None,
+    order: SortOrder = "desc",
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> MediaList:
     svc.get(project_id)
     items, total = media.list_assets(
-        project_id, kind=kind, stage=stage, day=day, postable=postable, limit=limit, offset=offset
+        project_id,
+        kind=kind,
+        stage=stage,
+        day=day,
+        postable=postable,
+        q=q,
+        media_type=media_type,
+        day_from=day_from,
+        day_to=day_to,
+        sort=sort,
+        order=order,
+        limit=limit,
+        offset=offset,
     )
     return MediaList(items=items, total=total, limit=limit, offset=offset)  # type: ignore[arg-type]
 
@@ -117,6 +145,40 @@ def media_thumbnail(project_id: str, asset_id: str, svc: ProjectServiceDep, medi
     if not path.is_file():
         raise NotFoundError("No thumbnail for this media file.")
     return FileResponse(path)
+
+
+@router.get("/{project_id}/media/{asset_id}/file")
+def media_file(
+    project_id: str,
+    asset_id: str,
+    svc: ProjectServiceDep,
+    media: MediaServiceDep,
+    variant: Literal["auto", "original", "proxy"] = "auto",
+) -> FileResponse:
+    """Stream an indexed media file for in-app preview (supports HTTP Range, so videos can seek).
+
+    ``auto`` serves the browser-friendly proxy when one exists, else the original; ``original`` and
+    ``proxy`` force one. The path always comes from the index and is re-checked against the project
+    folder, so a request can never read anything outside it. Originals are never modified.
+    """
+    project = svc.get(project_id)
+    asset = media.get_asset(project_id, asset_id)
+    if asset is None or asset.missing:
+        raise NotFoundError("Media file not found.")
+    use_proxy = variant == "proxy" or (variant == "auto" and bool(asset.proxy_path))
+    rel = asset.proxy_path if use_proxy else asset.relative_path
+    if not rel:
+        raise NotFoundError("This media file has no proxy yet.")
+    path = safe_join(Path(project.path).resolve(), rel)
+    if not path.is_file():
+        raise NotFoundError("The file is no longer on disk. Scan the project to refresh the index.")
+    guessed = mimetypes.guess_type(path.name)[0]
+    return FileResponse(
+        path,
+        media_type=guessed or "application/octet-stream",
+        content_disposition_type="inline",
+        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=300"},
+    )
 
 
 @router.post("/{project_id}/media/upload", response_model=list[MediaAssetRead], status_code=status.HTTP_201_CREATED)

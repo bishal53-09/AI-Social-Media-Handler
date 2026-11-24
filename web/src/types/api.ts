@@ -34,6 +34,8 @@ export interface ProjectDetail extends Project {
 export interface ProjectList {
   items: Project[];
   total: number;
+  limit?: number | null;
+  offset?: number;
 }
 
 export interface ProjectCreate {
@@ -157,6 +159,8 @@ export interface JobDetail extends Job {
 export interface JobList {
   items: Job[];
   total: number;
+  limit?: number | null;
+  offset?: number;
 }
 
 export interface JobCreate {
@@ -184,6 +188,8 @@ export interface Post {
 export interface PostList {
   items: Post[];
   total: number;
+  limit?: number | null;
+  offset?: number;
 }
 
 export interface PlatformInfo {
@@ -318,6 +324,8 @@ export interface ContentPostDetail extends Omit<ContentPostSummary, "platform_po
 export interface ContentPostList {
   items: ContentPostSummary[];
   total: number;
+  limit?: number | null;
+  offset?: number;
 }
 
 export interface ContentPostCreate {

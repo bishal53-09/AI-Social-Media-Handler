@@ -54,3 +54,5 @@ class JobDetail(JobRead):
 class JobList(BaseModel):
     items: list[JobRead]
     total: int
+    limit: int | None = None
+    offset: int = 0

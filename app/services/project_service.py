@@ -7,7 +7,7 @@ import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig, Settings
@@ -15,6 +15,7 @@ from app.core.exceptions import ConflictError, NotFoundError, PathSecurityError
 from app.core.paths import expand, is_within
 from app.models import MediaAsset, Project
 from app.schemas.project import ProjectMetadata, ProjectSettings
+from app.services.listing import SortOrder, apply_sort, like_pattern
 from app.tracking.events import append_event
 from app.tracking.repository import ProjectRepository
 
@@ -62,6 +63,10 @@ def slugify(name: str) -> str:
     text = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60].strip("-")
     return slug or "project"
+
+
+#: Columns the project list can be sorted by (``?sort=``).
+PROJECT_SORT = {"name": Project.name, "created": Project.created_at, "updated": Project.updated_at}
 
 
 class ProjectService:
@@ -186,8 +191,25 @@ class ProjectService:
 
     # -- queries -------------------------------------------------------------
 
-    def list_projects(self) -> list[Project]:
-        return list(self.session.scalars(select(Project).order_by(Project.created_at.desc())))
+    def list_projects(
+        self,
+        *,
+        q: str | None = None,
+        sort: str | None = None,
+        order: SortOrder = "desc",
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> tuple[list[Project], int]:
+        query = select(Project)
+        if q and q.strip():
+            pat = like_pattern(q)
+            query = query.where(or_(Project.name.ilike(pat, escape="\\"), Project.description.ilike(pat, escape="\\")))
+        total = self.session.scalar(select(func.count()).select_from(query.subquery())) or 0
+        query = apply_sort(query, PROJECT_SORT, sort, order, [Project.created_at.desc()], Project.id)
+        query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+        return list(self.session.scalars(query)), int(total)
 
     def get(self, project_id: str) -> Project:
         project = self.session.get(Project, project_id)

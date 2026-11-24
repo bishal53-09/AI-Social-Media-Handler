@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Query
 
 from app.api.deps import EngagementServiceDep, PostServiceDep
@@ -13,6 +15,7 @@ from app.schemas.engagement import (
     SyncReportRead,
 )
 from app.schemas.post import PostList, PostRead
+from app.services.listing import SortOrder
 
 router = APIRouter(prefix="/posts", tags=["publishing"])
 
@@ -22,12 +25,17 @@ def list_posts(
     svc: PostServiceDep,
     project_id: str | None = None,
     status: str | None = Query(default=None, max_length=16),
+    platform: str | None = Query(default=None, max_length=32),
+    sort: Literal["created", "status", "platform"] | None = None,
+    order: SortOrder = "desc",
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> PostList:
     """Platform posts (one per platform). The user-facing view is ``/content-posts``."""
-    items, total = svc.list_posts(project_id=project_id, status=status, limit=limit, offset=offset)
-    return PostList(items=[PostRead.model_validate(p) for p in items], total=total)
+    items, total = svc.list_posts(
+        project_id=project_id, status=status, platform=platform, sort=sort, order=order, limit=limit, offset=offset
+    )
+    return PostList(items=[PostRead.model_validate(p) for p in items], total=total, limit=limit, offset=offset)
 
 
 @router.get("/{post_id}/comments", response_model=CommentList)

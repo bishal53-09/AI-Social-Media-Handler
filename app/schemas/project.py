@@ -64,6 +64,8 @@ class ProjectDetail(ProjectRead):
 class ProjectList(BaseModel):
     items: list[ProjectRead]
     total: int
+    limit: int | None = None
+    offset: int = 0
 
 
 class DaySummary(BaseModel):

@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig
@@ -18,11 +19,15 @@ from app.database.session import Database
 from app.models import Job, JobEvent, Project
 from app.pipeline.orchestrator import PipelineRunner, resolve_stages
 from app.schemas.job import JobCreate
+from app.services.listing import SortOrder, apply_sort, day_end_exclusive, day_start, like_pattern
 from app.services.media_service import MediaService
 
 logger = logging.getLogger(__name__)
 
 TERMINAL = {"completed", "failed", "cancelled"}
+
+#: Columns the job list can be sorted by (``?sort=``).
+JOB_SORT = {"created": Job.created_at, "status": Job.status, "type": Job.type, "progress": Job.progress}
 
 
 class JobRunner:
@@ -136,17 +141,32 @@ class JobService:
         *,
         status: str | None = None,
         project_id: str | None = None,
+        job_type: str | None = None,
+        q: str | None = None,
+        created_from: date | None = None,
+        created_to: date | None = None,
+        sort: str | None = None,
+        order: SortOrder = "desc",
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[Job], int]:
-        q = select(Job)
+        query = select(Job)
         if status:
-            q = q.where(Job.status == status)
+            query = query.where(Job.status == status)
         if project_id:
-            q = q.where(Job.project_id == project_id)
-        total = self.session.scalar(select(func.count()).select_from(q.subquery())) or 0
-        items = list(self.session.scalars(q.order_by(Job.created_at.desc()).limit(limit).offset(offset)))
-        return items, int(total)
+            query = query.where(Job.project_id == project_id)
+        if job_type:
+            query = query.where(Job.type == job_type)
+        if q and q.strip():
+            pat = like_pattern(q)
+            query = query.where(or_(Job.type.ilike(pat, escape="\\"), Job.id.ilike(pat, escape="\\")))
+        if created_from:
+            query = query.where(Job.created_at >= day_start(created_from))
+        if created_to:
+            query = query.where(Job.created_at < day_end_exclusive(created_to))
+        total = self.session.scalar(select(func.count()).select_from(query.subquery())) or 0
+        query = apply_sort(query, JOB_SORT, sort, order, [Job.created_at.desc()], Job.id)
+        return list(self.session.scalars(query.limit(limit).offset(offset))), int(total)
 
     def cancel(self, job_id: str) -> Job:
         job = self.get(job_id)

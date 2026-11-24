@@ -67,3 +67,5 @@ class PostRead(BaseModel):
 class PostList(BaseModel):
     items: list[PostRead]
     total: int
+    limit: int | None = None
+    offset: int = 0

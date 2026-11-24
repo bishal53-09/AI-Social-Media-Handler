@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderKanban, Plus } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
+import { FilterBar, Pagination, SearchBox, SortControl } from "@/components/list-controls";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
+import { useListState } from "@/hooks/use-list-state";
 import { api, ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/utils";
 
@@ -111,10 +113,26 @@ function CreateProjectForm({ mediaRoot, onCancel }: { mediaRoot?: string; onCanc
   );
 }
 
-export default function ProjectsPage() {
-  const projects = useApi(() => api.projects.list(), []);
+const FILTERS = ["q", "sort", "order"];
+
+function ProjectsList() {
+  const list = useListState(12);
+  const sort = list.get("sort");
+  const order = list.get("order") || "desc";
+  const projects = useApi(
+    () =>
+      api.projects.list({
+        q: list.get("q"),
+        sort: sort || undefined,
+        order: sort ? (order as "asc" | "desc") : undefined,
+        limit: list.pageSize,
+        offset: list.offset,
+      }),
+    [list.key],
+  );
   const settings = useApi(() => api.settings(), []);
   const [creating, setCreating] = useState(false);
+  const filtered = FILTERS.some((k) => list.get(k));
 
   return (
     <>
@@ -134,42 +152,91 @@ export default function ProjectsPage() {
         />
       ) : null}
 
+      <FilterBar active={filtered} onClear={() => list.clear(FILTERS)}>
+        <SearchBox
+          value={list.get("q")}
+          onChange={(q) => list.set({ q })}
+          placeholder="Search name or description…"
+        />
+        <SortControl
+          sort={sort}
+          order={order}
+          defaultLabel="Newest first"
+          options={[
+            { value: "name", label: "Name" },
+            { value: "created", label: "Created" },
+            { value: "updated", label: "Last updated" },
+          ]}
+          onChange={({ sort, order }) => list.set({ sort, order })}
+        />
+      </FilterBar>
+
       {projects.error ? (
         <ErrorState error={projects.error} onRetry={projects.reload} />
       ) : !projects.data ? (
         <Skeleton className="h-32" />
-      ) : projects.data.items.length === 0 ? (
-        <EmptyState
-          icon={FolderKanban}
-          title="No projects yet"
-          description="Create your first project to start organising footage."
-        >
-          {!creating ? (
-            <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus /> New project
+      ) : projects.data.total === 0 ? (
+        filtered ? (
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects match your search"
+            description="Try different words or clear the search."
+          >
+            <Button size="sm" variant="outline" onClick={() => list.clear(FILTERS)}>
+              Clear filters
             </Button>
-          ) : null}
-        </EmptyState>
+          </EmptyState>
+        ) : (
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet"
+            description="Create your first project to start organising footage."
+          >
+            {!creating ? (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus /> New project
+              </Button>
+            ) : null}
+          </EmptyState>
+        )
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.data.items.map((p) => (
-            <Link key={p.id} href={`/projects/${p.id}`} className="group">
-              <Card className="h-full gap-2 transition-colors group-hover:border-primary/50">
-                <CardHeader>
-                  <CardTitle className="text-[13px]">{p.name}</CardTitle>
-                  <CardDescription className="truncate font-mono" title={p.path}>
-                    {p.path}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  {p.description ? <p className="mb-1 line-clamp-2">{p.description}</p> : null}
-                  Created {formatDateTime(p.created_at)}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.data.items.map((p) => (
+              <Link key={p.id} href={`/projects/${p.id}`} className="group">
+                <Card className="h-full gap-2 transition-colors group-hover:border-primary/50">
+                  <CardHeader>
+                    <CardTitle className="text-[13px]">{p.name}</CardTitle>
+                    <CardDescription className="truncate font-mono" title={p.path}>
+                      {p.path}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground">
+                    {p.description ? <p className="mb-1 line-clamp-2">{p.description}</p> : null}
+                    Created {formatDateTime(p.created_at)}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          <Card className="mt-3 py-0">
+            <Pagination
+              total={projects.data.total}
+              list={list}
+              shown={projects.data.items.length}
+              noun="project"
+            />
+          </Card>
+        </>
       )}
     </>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-32" />}>
+      <ProjectsList />
+    </Suspense>
   );
 }

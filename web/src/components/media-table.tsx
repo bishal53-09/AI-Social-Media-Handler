@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { MediaThumb } from "@/components/media-preview";
 import { MediaTypeBadge } from "@/components/status-badge";
 import {
   Table,
@@ -88,8 +89,11 @@ function NameCell({
 export function MediaTable({
   items,
   onRename,
+  onPreview,
 }: {
   items: MediaAsset[];
+  /** When given, thumbnails open the in-app preview (receives the item's index in `items`). */
+  onPreview?: (index: number) => void;
   /** When given, each row can be renamed. Only the label changes; the file is not touched. */
   onRename?: (item: MediaAsset, name: string | null) => Promise<void>;
 }) {
@@ -97,6 +101,7 @@ export function MediaTable({
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-16">Preview</TableHead>
           <TableHead>File</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Resolution</TableHead>
@@ -109,8 +114,11 @@ export function MediaTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map((m) => (
+        {items.map((m, i) => (
           <TableRow key={m.id}>
+            <TableCell>
+              <MediaThumb asset={m} onOpen={onPreview ? () => onPreview(i) : undefined} />
+            </TableCell>
             <TableCell className="max-w-72">
               <NameCell key={m.name} item={m} onRename={onRename} />
               <div

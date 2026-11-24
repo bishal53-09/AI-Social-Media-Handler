@@ -19,3 +19,10 @@ abstraction with Anthropic provider, FastAPI API, CLI, Next.js dashboard, CI.
   files; each platform variant declares how many it accepts (Instagram carousel: 10, others: 1). `media/processed/`
   and `media/ready/` are now indexed. New post/project forms no longer ask for typed paths or a camera model
   (the camera is detected from file metadata; `default_camera` stays an optional API setting). Migration `0003`.
+- Preview before posting: videos play and photos show inside the app (media library, project media list, and the new-post
+  picker). `GET /projects/{id}/media/{asset}/file` streams the file with HTTP Range support (seeking), prefers the
+  proxy when one exists (`?variant=original|proxy` to force), and re-checks the path against the project folder.
+  Formats a browser cannot play (and have no proxy yet) say so instead of showing a broken player.
+- List pages for projects, posts, media and jobs: server-side pagination, search, filters (status, platform, project,
+  type/stage/format, date range) and sorting, with the state kept in the URL. Shared building blocks live in
+  `web/src/components/list-controls.tsx` and `web/src/hooks/use-list-state.ts`; list endpoints return `limit`/`offset`.

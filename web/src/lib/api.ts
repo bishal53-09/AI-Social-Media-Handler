@@ -46,6 +46,25 @@ export class ApiError extends Error {
   }
 }
 
+/** Build a query string, skipping empty values. */
+export function qs(params: object): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params) as [string, unknown][]) {
+    if (v !== undefined && v !== null && v !== "") q.set(k, String(v));
+  }
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+/** Paging, search and sorting accepted by every list endpoint. */
+export interface ListParams {
+  q?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -99,7 +118,8 @@ export const api = {
   updateStatus: (refresh = false) =>
     request<UpdateStatus>(`/system/update${refresh ? "?refresh=true" : ""}`),
   projects: {
-    list: () => request<ProjectList>("/projects"),
+    list: (params: ListParams = {}) =>
+      request<ProjectList>(`/projects${qs({ limit: 200, ...params })}`),
     get: (id: string) => request<ProjectDetail>(`/projects/${encodeURIComponent(id)}`),
     create: (body: ProjectCreate) => post<Project>("/projects", body),
     days: (id: string) => request<DayList>(`/projects/${encodeURIComponent(id)}/days`),
@@ -107,13 +127,15 @@ export const api = {
       request<DayRead>(`/projects/${encodeURIComponent(id)}/days/${date}`),
     media: (
       id: string,
-      params: { stage?: string; kind?: string; limit?: number; postable?: boolean } = {},
-    ) => {
-      const q = new URLSearchParams();
-      for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
-      const qs = q.toString();
-      return request<MediaList>(`/projects/${encodeURIComponent(id)}/media${qs ? `?${qs}` : ""}`);
-    },
+      params: ListParams & {
+        stage?: string;
+        kind?: string;
+        media_type?: string;
+        day_from?: string;
+        day_to?: string;
+        postable?: boolean;
+      } = {},
+    ) => request<MediaList>(`/projects/${encodeURIComponent(id)}/media${qs(params)}`),
     uploadMedia: (id: string, files: File[]) => {
       const form = new FormData();
       for (const f of files) form.append("files", f);
@@ -127,37 +149,42 @@ export const api = {
         `/projects/${encodeURIComponent(id)}/media/${encodeURIComponent(assetId)}`,
         { method: "PATCH", body: JSON.stringify({ display_name: displayName }) },
       ),
+    /** Streams the file for in-app preview. `auto` uses the proxy when one exists. */
+    fileUrl: (id: string, assetId: string, variant: "auto" | "original" | "proxy" = "auto") =>
+      `${API_URL}/api/v1/projects/${encodeURIComponent(id)}/media/${encodeURIComponent(assetId)}/file${variant === "auto" ? "" : `?variant=${variant}`}`,
     thumbnailUrl: (id: string, assetId: string) =>
       `${API_URL}/api/v1/projects/${encodeURIComponent(id)}/media/${encodeURIComponent(assetId)}/thumbnail`,
     scan: (id: string, probe = true) =>
       post<ScanResult>(`/projects/${encodeURIComponent(id)}/media/scan`, { probe }),
   },
   jobs: {
-    list: (params: { project_id?: string; status?: string; limit?: number } = {}) => {
-      const q = new URLSearchParams();
-      for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
-      const qs = q.toString();
-      return request<JobList>(`/jobs${qs ? `?${qs}` : ""}`);
-    },
+    list: (
+      params: ListParams & {
+        project_id?: string;
+        status?: string;
+        type?: string;
+        created_from?: string;
+        created_to?: string;
+      } = {},
+    ) => request<JobList>(`/jobs${qs(params)}`),
     get: (id: string) => request<JobDetail>(`/jobs/${encodeURIComponent(id)}`),
     create: (body: JobCreate) => post<Job>("/jobs", body),
     cancel: (id: string) => post<Job>(`/jobs/${encodeURIComponent(id)}/cancel`),
   },
   posts: {
-    list: (params: { project_id?: string } = {}) => {
-      const q = new URLSearchParams();
-      for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
-      const qs = q.toString();
-      return request<PostList>(`/posts${qs ? `?${qs}` : ""}`);
-    },
+    list: (params: ListParams & { project_id?: string; status?: string; platform?: string } = {}) =>
+      request<PostList>(`/posts${qs(params)}`),
   },
   contentPosts: {
-    list: (params: { project_id?: string; limit?: number } = {}) => {
-      const q = new URLSearchParams();
-      for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
-      const qs = q.toString();
-      return request<ContentPostList>(`/content-posts${qs ? `?${qs}` : ""}`);
-    },
+    list: (
+      params: ListParams & {
+        project_id?: string;
+        status?: string;
+        platform?: string;
+        created_from?: string;
+        created_to?: string;
+      } = {},
+    ) => request<ContentPostList>(`/content-posts${qs(params)}`),
     get: (id: string) => request<ContentPostDetail>(`/content-posts/${encodeURIComponent(id)}`),
     create: (body: ContentPostCreate) => post<ContentPostDetail>("/content-posts", body),
   },

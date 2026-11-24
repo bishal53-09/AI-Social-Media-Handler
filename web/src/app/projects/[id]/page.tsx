@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { hasActiveJob, JobTable } from "@/components/job-table";
+import { useMediaPreview } from "@/components/media-preview";
 import { MediaTable } from "@/components/media-table";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,6 +24,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const project = useApi(() => api.projects.get(id), [id]);
   const media = useApi(() => api.projects.media(id, { limit: 200 }), [id]);
+  const preview = useMediaPreview();
   const days = useApi(() => api.projects.days(id), [id]);
   const jobs = useApi(() => api.jobs.list({ project_id: id, limit: 6 }), [id], {
     pollMs: (d) => (hasActiveJob(d?.items) ? 1500 : null),
@@ -217,7 +219,11 @@ export default function ProjectDetailPage() {
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">
-            <Link href="/media">Media library</Link>
+            <Link href={`/media?project=${encodeURIComponent(id)}`}>
+              {media.data && media.data.total > media.data.items.length
+                ? `All ${media.data.total} files in the library`
+                : "Media library"}
+            </Link>
           </Button>
         </CardHeader>
         <CardContent className="px-0">
@@ -236,7 +242,11 @@ export default function ProjectDetailPage() {
               />
             </div>
           ) : (
-            <MediaTable items={media.data.items} onRename={rename} />
+            <MediaTable
+              items={media.data.items}
+              onRename={rename}
+              onPreview={(i) => preview.open(media.data!.items, i)}
+            />
           )}
         </CardContent>
       </Card>
@@ -287,6 +297,7 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {preview.node}
     </>
   );
 }

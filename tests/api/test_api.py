@@ -90,7 +90,7 @@ def test_cors_only_allows_the_local_dashboard(client: TestClient) -> None:
 
 
 def test_project_crud_flow(client: TestClient, settings: Settings) -> None:
-    assert client.get(f"{V1}/projects").json() == {"items": [], "total": 0}
+    assert client.get(f"{V1}/projects").json() == {"items": [], "total": 0, "limit": 200, "offset": 0}
     p = create_project(client, "My Trip", description="d", default_camera="DJI Osmo 360 II")
     assert p["id"] == "my-trip" and Path(p["path"]).is_dir()
     assert Path(p["path"]).parent == settings.media_root_path.resolve()
@@ -234,7 +234,7 @@ def test_cancel_a_queued_job(client: TestClient) -> None:
 
 
 def test_posts_listing_is_read_only_and_empty(client: TestClient) -> None:
-    assert client.get(f"{V1}/posts").json() == {"items": [], "total": 0}
+    assert client.get(f"{V1}/posts").json() == {"items": [], "total": 0, "limit": 50, "offset": 0}
     assert client.post(f"{V1}/posts", json={}).status_code == 405
 
 

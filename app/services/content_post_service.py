@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig
@@ -24,6 +24,7 @@ from app.schemas.engagement import (
 )
 from app.schemas.post import PostAttemptRead, PostCreate
 from app.services.engagement_service import EngagementService
+from app.services.listing import SortOrder, apply_sort, day_end_exclusive, day_start, like_pattern
 from app.services.post_service import PostService
 from platforms.base import ADDITIVE_METRICS
 from platforms.registry import get_registry
@@ -47,6 +48,10 @@ def _sum_additive(metric_dicts: list[dict[str, Any]]) -> dict[str, float | int]:
             if isinstance(value, int | float) and not isinstance(value, bool):
                 totals[key] = totals.get(key, 0) + value
     return totals
+
+
+#: Columns the post list can be sorted by (``?sort=``).
+CONTENT_POST_SORT = {"created": ContentPost.created_at, "title": ContentPost.title}
 
 
 class ContentPostService:
@@ -153,13 +158,41 @@ class ContentPostService:
         return content
 
     def list_posts(
-        self, *, project_id: str | None = None, limit: int = 50, offset: int = 0
+        self,
+        *,
+        project_id: str | None = None,
+        q: str | None = None,
+        status: str | None = None,
+        platform: str | None = None,
+        created_from: date | None = None,
+        created_to: date | None = None,
+        sort: str | None = None,
+        order: SortOrder = "desc",
+        limit: int = 50,
+        offset: int = 0,
     ) -> tuple[list[ContentPostSummary], int]:
-        q = select(ContentPost)
+        query = select(ContentPost)
         if project_id:
-            q = q.where(ContentPost.project_id == project_id)
-        total = self.session.scalar(select(func.count()).select_from(q.subquery())) or 0
-        rows = list(self.session.scalars(q.order_by(ContentPost.created_at.desc()).limit(limit).offset(offset)))
+            query = query.where(ContentPost.project_id == project_id)
+        if q and q.strip():
+            pat = like_pattern(q)
+            query = query.where(
+                or_(ContentPost.title.ilike(pat, escape="\\"), ContentPost.caption.ilike(pat, escape="\\"))
+            )
+        if status or platform:  # a post matches when any one of its platform posts matches both
+            sub = select(Post.content_post_id).where(Post.content_post_id.is_not(None))
+            if status:
+                sub = sub.where(Post.status == status)
+            if platform:
+                sub = sub.where(Post.platform == platform)
+            query = query.where(ContentPost.id.in_(sub))
+        if created_from:
+            query = query.where(ContentPost.created_at >= day_start(created_from))
+        if created_to:
+            query = query.where(ContentPost.created_at < day_end_exclusive(created_to))
+        total = self.session.scalar(select(func.count()).select_from(query.subquery())) or 0
+        query = apply_sort(query, CONTENT_POST_SORT, sort, order, [ContentPost.created_at.desc()], ContentPost.id)
+        rows = list(self.session.scalars(query.limit(limit).offset(offset)))
         return self._summaries(rows), int(total)
 
     def _summaries(self, rows: list[ContentPost]) -> list[ContentPostSummary]:

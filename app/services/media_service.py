@@ -9,7 +9,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, BinaryIO
 
 from PIL import Image
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import AppConfig
@@ -27,6 +27,7 @@ from app.pipeline.ffmpeg import check_binary, probe_file
 from app.pipeline.sidecar import clip_id_for
 from app.pipeline.stages.probe import ORIGINAL_360_EXTENSIONS, classify_media
 from app.schemas.media import ScanResult
+from app.services.listing import SortOrder, apply_sort, like_pattern
 from app.tracking.events import append_event
 from app.tracking.repository import ProjectRepository
 
@@ -61,6 +62,15 @@ def _day_for(rel: str, mtime: float) -> str:
         except ValueError:
             pass
     return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+
+
+#: Columns the media list can be sorted by (``?sort=``).
+MEDIA_SORT = {
+    "name": MediaAsset.relative_path,
+    "day": MediaAsset.day,
+    "size": MediaAsset.size_bytes,
+    "added": MediaAsset.created_at,
+}
 
 
 class MediaService:
@@ -232,24 +242,48 @@ class MediaService:
         stage: str | None = None,
         day: str | None = None,
         postable: bool = False,
+        q: str | None = None,
+        media_type: str | None = None,
+        day_from: str | None = None,
+        day_to: str | None = None,
+        sort: str | None = None,
+        order: SortOrder = "desc",
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[MediaAsset], int]:
-        q = select(MediaAsset).where(MediaAsset.project_id == project_id)
+        query = select(MediaAsset).where(MediaAsset.project_id == project_id)
         if postable:  # picker data: real files you can attach to a post, not generated helpers
-            q = q.where(MediaAsset.missing.is_(False), MediaAsset.stage.notin_(("proxy", "thumbnail")))
+            query = query.where(MediaAsset.missing.is_(False), MediaAsset.stage.notin_(("proxy", "thumbnail")))
         if kind:
-            q = q.where(MediaAsset.kind == kind)
+            query = query.where(MediaAsset.kind == kind)
         if stage:
-            q = q.where(MediaAsset.stage == stage)
+            query = query.where(MediaAsset.stage == stage)
+        if media_type:
+            query = query.where(MediaAsset.media_type == media_type)
         if day:
-            q = q.where(MediaAsset.day == day)
-        total = self.session.scalar(select(func.count()).select_from(q.subquery())) or 0
-        items = list(
-            self.session.scalars(
-                q.order_by(MediaAsset.day.desc(), MediaAsset.relative_path).limit(limit).offset(offset)
+            query = query.where(MediaAsset.day == day)
+        if day_from:
+            query = query.where(MediaAsset.day >= day_from)
+        if day_to:
+            query = query.where(MediaAsset.day <= day_to)
+        if q and q.strip():
+            pat = like_pattern(q)
+            query = query.where(
+                or_(
+                    MediaAsset.relative_path.ilike(pat, escape="\\"),
+                    MediaAsset.display_name.ilike(pat, escape="\\"),
+                )
             )
+        total = self.session.scalar(select(func.count()).select_from(query.subquery())) or 0
+        query = apply_sort(
+            query,
+            MEDIA_SORT,
+            sort,
+            order,
+            [MediaAsset.day.desc(), MediaAsset.relative_path],
+            MediaAsset.id,
         )
+        items = list(self.session.scalars(query.limit(limit).offset(offset)))
         return items, int(total)
 
     def rename(self, project_id: str, asset_id: str, display_name: str | None) -> MediaAsset:

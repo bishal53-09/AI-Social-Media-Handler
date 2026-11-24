@@ -175,6 +175,8 @@ class ContentPostDetail(ContentPostSummary):
 class ContentPostList(BaseModel):
     items: list[ContentPostSummary]
     total: int
+    limit: int | None = None
+    offset: int = 0
 
 
 class PlatformBreakdown(BaseModel):

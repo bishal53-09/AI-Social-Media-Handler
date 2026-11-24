@@ -24,6 +24,10 @@ from app.database.base import utcnow
 from app.models import Post, PostAttempt, Project
 from app.publishing.state import PostStatus, require_transition
 from app.schemas.post import PostCreate
+from app.services.listing import SortOrder, apply_sort
+
+#: Columns the platform-post list can be sorted by (``?sort=``).
+POST_SORT = {"created": Post.created_at, "status": Post.status, "platform": Post.platform}
 
 
 class PostService:
@@ -43,6 +47,9 @@ class PostService:
         *,
         project_id: str | None = None,
         status: str | None = None,
+        platform: str | None = None,
+        sort: str | None = None,
+        order: SortOrder = "desc",
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[Post], int]:
@@ -51,9 +58,11 @@ class PostService:
             q = q.where(Post.project_id == project_id)
         if status:
             q = q.where(Post.status == status)
+        if platform:
+            q = q.where(Post.platform == platform)
         total = self.session.scalar(select(func.count()).select_from(q.subquery())) or 0
-        items = list(self.session.scalars(q.order_by(Post.created_at.desc()).limit(limit).offset(offset)))
-        return items, int(total)
+        q = apply_sort(q, POST_SORT, sort, order, [Post.created_at.desc()], Post.id)
+        return list(self.session.scalars(q.limit(limit).offset(offset))), int(total)
 
     def attempts(self, post_id: str) -> list[PostAttempt]:
         return list(
