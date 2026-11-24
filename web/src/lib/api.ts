@@ -22,6 +22,7 @@ import type {
   ProjectList,
   ScanResult,
   SyncReport,
+  SetupStatus,
   UpdateStatus,
 } from "@/types/api";
 
@@ -116,9 +117,13 @@ export const api = {
   health: () => request<Health>("/health"),
   settings: () => request<AppSettings>("/settings"),
   checkSession: (platform: string) =>
-    post<{ signed_in: boolean }>(`/settings/platforms/${encodeURIComponent(platform)}/session/check`),
+    post<{ signed_in: boolean }>(
+      `/settings/platforms/${encodeURIComponent(platform)}/session/check`,
+    ),
   startLogin: (platform: string) =>
     post<{ message: string }>(`/settings/platforms/${encodeURIComponent(platform)}/session/login`),
+  setupStatus: () => request<SetupStatus>("/setup/status"),
+  installBrowser: () => post<{ state: string; message: string }>("/setup/browser/install"),
   updateStatus: (refresh = false) =>
     request<UpdateStatus>(`/system/update${refresh ? "?refresh=true" : ""}`),
   projects: {

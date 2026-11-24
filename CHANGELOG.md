@@ -5,6 +5,7 @@ Initial foundation: project format and schemas, SQLite + Alembic, ingest/probe/t
 job tracking, publishing state machine, platform adapter contract (publishing not implemented), AI provider
 abstraction with Anthropic provider, FastAPI API, CLI, Next.js dashboard, CI.
 
+- Easy start for non-technical users: `./start.sh` (double-click `Start.command` on a Mac) installs anything missing on first run, starts the app and opens it. A first-run **Setup guide** page (`/setup`) checks the computer, installs the connection browser with one button, and walks through signing in to Instagram, TikTok and YouTube and checking each login, in plain language. New `GET /api/v1/setup/status` and `POST /api/v1/setup/browser/install`.
 - Instagram, TikTok and YouTube are now driven through your own logged-in browser session instead of API keys (experimental; `asmh login <platform>`).
 - `make dev` starts backend and frontend together and prints the dashboard URL; Ctrl+C stops both.
 - `make update` fast-forwards to the latest upstream commit, reinstalls dependencies and runs migrations.

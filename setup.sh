@@ -143,11 +143,10 @@ say "Initialising database and validating configuration"
 
 cat <<MSG
 
-Done. Next steps:
-  cd $INSTALL_DIR
-  1. Edit .env and add ANTHROPIC_API_KEY (optional until you use AI features)
-  2. Start the app:       make dev   (backend + frontend; Ctrl+C stops both)
-  3. Open http://localhost:3000
-  Update later:           make update
-  Create a project:       .venv/bin/python -m app.cli init-project --name "My Project"
+All set. To start the app (now or any time later):
+  Mac:    double-click "Start.command" in $INSTALL_DIR
+  Any:    cd $INSTALL_DIR && ./start.sh
+It opens in your browser at http://localhost:3000 and a short guide walks you through
+connecting Instagram, TikTok and YouTube. Press Ctrl+C in the window to stop it.
+Update later: make update
 MSG

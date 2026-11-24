@@ -26,6 +26,16 @@ machine unless you explicitly allow it.
   **no real platform integration exists yet**, so real posts show "not implemented" instead of data.
 - FastAPI backend, CLI, and a Next.js dashboard (dark/light) that shows real data and honest "not implemented" states.
 
+## Quick start (no technical knowledge needed)
+
+1. Get the project folder (download the ZIP from GitHub and unzip it, or run the install command below).
+2. **Mac:** double-click `Start.command`. **Linux:** run `./start.sh`. The first start installs everything it needs
+   (video tools, Node.js, Python, and the private browser used to connect your accounts), which takes a few minutes.
+3. Your web browser opens the app. A **Setup guide** walks you through installing the connection browser if needed,
+   signing in to Instagram, TikTok and YouTube, and checking each sign-in. Find it any time under *Setup guide* in the menu.
+
+Installing software may ask for your computer password once. Windows is not supported yet.
+
 ## Requirements
 
 Python 3.11+, Node.js 20+, FFmpeg + ffprobe, git. macOS and Linux.
@@ -39,6 +49,8 @@ curl -fsSL https://raw.githubusercontent.com/bishal53-09/AI-Social-Media-Handler
 `setup.sh` is safe to re-run; it never overwrites `.env` or local changes. Overrides: `INSTALL_DIR`, `REPO_URL`, `BRANCH`.
 
 ## Run
+
+`./start.sh` (or `make start`) installs anything missing, starts everything and opens the app. For development:
 
 ```bash
 make dev

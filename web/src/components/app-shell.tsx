@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   Menu,
+  Rocket,
   Newspaper,
   Send,
   Settings,
@@ -34,6 +35,7 @@ const NAV = [
   { href: "/editor", label: "AI Editor", icon: Sparkles },
   { href: "/publishing", label: "Publishing", icon: Send },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/setup", label: "Setup guide", icon: Rocket },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

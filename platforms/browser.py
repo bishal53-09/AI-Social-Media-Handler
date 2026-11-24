@@ -127,3 +127,16 @@ class BrowserAdapter(PlatformAdapter):
 
     def refresh_credentials(self, credentials: Credentials) -> Credentials:
         return credentials  # the browser profile holds the session; nothing to refresh
+
+
+def browser_installed() -> bool:
+    """True when Playwright and its Chromium build are present. Never launches a browser."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return False
+    try:
+        with sync_playwright() as pw:
+            return os.path.exists(pw.chromium.executable_path)
+    except Exception:
+        return False

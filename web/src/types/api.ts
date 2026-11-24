@@ -394,3 +394,27 @@ export interface AnalyticsOverview {
   }[];
   last_collected_at: string | null;
 }
+
+export interface SetupItem {
+  id: string;
+  title: string;
+  ok: boolean;
+  required: boolean;
+  help: string;
+}
+
+export interface SetupAccount {
+  name: string;
+  title: string;
+  connected: boolean;
+  can_publish: boolean;
+}
+
+export interface SetupStatus {
+  items: SetupItem[];
+  accounts: SetupAccount[];
+  ready: boolean;
+  any_account_connected: boolean;
+  browser_install: "idle" | "running" | "done" | "failed";
+  browser_install_message: string;
+}

@@ -1,6 +1,10 @@
-.PHONY: install dev update dev-backend dev-frontend test lint typecheck format check doctor
+.PHONY: start install dev update dev-backend dev-frontend test lint typecheck format check doctor
 
 PY ?= .venv/bin/python
+
+# One step for everyone: installs anything missing on first run, starts the app, opens the browser.
+start:
+	bash start.sh
 
 install:
 	bash setup.sh

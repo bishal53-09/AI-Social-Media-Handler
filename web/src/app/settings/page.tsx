@@ -30,7 +30,11 @@ const Yes = ({ ok }: { ok: boolean }) =>
     <X className="inline size-4 text-destructive" aria-label="no" />
   );
 
-function PlatformSessionRow({ p }: { p: { name: string; session_saved: boolean; publishing_implemented: boolean } }) {
+function PlatformSessionRow({
+  p,
+}: {
+  p: { name: string; session_saved: boolean; publishing_implemented: boolean };
+}) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const check = async () => {
@@ -211,8 +215,8 @@ export default function SettingsPage() {
               </dl>
               {!s.ffmpeg_available || !s.ffprobe_available ? (
                 <p className="mt-2 text-[11px] text-warning">
-                  Install FFmpeg (macOS: <code className="font-mono">brew install ffmpeg</code>,
-                  Debian/Ubuntu: <code className="font-mono">sudo apt install ffmpeg</code>).
+                  The video tools are missing. Run the installer again (Start.command on a Mac, or
+                  ./setup.sh); it adds them for you.
                 </p>
               ) : null}
             </CardContent>
