@@ -29,6 +29,10 @@ from app.core.paths import expand
 from platforms.base import Credentials, PlatformAdapter
 
 DEFAULT_PROFILE_DIR = "~/.asmh/browser-profiles"
+SETUP_HINT = (
+    "The browser needed to connect your accounts is not set up on this computer. "
+    "Re-run the installer (setup.sh) or run `make update`; it installs everything automatically."
+)
 NAV_TIMEOUT_MS = 45_000
 #: Publishing waits for server-side processing, which can take minutes.
 PUBLISH_TIMEOUT_MS = 10 * 60_000
@@ -72,16 +76,22 @@ class BrowserAdapter(PlatformAdapter):
     def _launch(self, *, headless: bool) -> Iterator[Any]:
         """Open the persistent profile and yield a page. Tests replace this."""
         try:
+            from playwright.sync_api import Error as PlaywrightError
             from playwright.sync_api import sync_playwright
         except ImportError as exc:
-            raise DependencyMissingError(
-                "Playwright is not installed. Run: pip install -e '.[browser]' && playwright install chromium"
-            ) from exc
+            raise DependencyMissingError(SETUP_HINT) from exc
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as pw:
-            ctx = pw.chromium.launch_persistent_context(
-                str(self.profile_dir), headless=headless, no_viewport=not headless
-            )
+            try:
+                ctx = pw.chromium.launch_persistent_context(
+                    str(self.profile_dir), headless=headless, no_viewport=not headless
+                )
+            except PlaywrightError as exc:
+                if "xecutable doesn't exist" in str(exc):
+                    raise DependencyMissingError(SETUP_HINT) from exc
+                raise PlatformError(
+                    "The browser could not start. If a window for this account is already open, close it and try again."
+                ) from exc
             try:
                 page = ctx.pages[0] if ctx.pages else ctx.new_page()
                 page.set_default_timeout(NAV_TIMEOUT_MS)

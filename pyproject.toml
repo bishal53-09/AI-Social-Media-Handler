@@ -31,10 +31,10 @@ dependencies = [
     "jsonschema[format-nongpl]>=4.22,<5",
     "pillow>=10,<14",
     "anthropic>=0.60",
+    "playwright>=1.45",
 ]
 
 [project.optional-dependencies]
-browser = ["playwright>=1.45"]
 dev = [
     "pytest>=8",
     "httpx>=0.27",

@@ -44,6 +44,11 @@ say "Python dependencies"
 [ -x "$PY" ] || fail "Python environment not found at $PY. Run 'make install' first."
 "$PY" -m pip install --quiet -e ".[dev]"
 
+say "Browser for connecting your accounts"
+"$PY" -m playwright install chromium
+command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 \
+  || echo "  FFmpeg is missing: re-run setup.sh (it installs it for you)."
+
 say "Frontend dependencies"
 (cd web && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi)
 

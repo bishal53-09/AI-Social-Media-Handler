@@ -5,10 +5,9 @@ Contract: `platforms/base.py` (capabilities, media validation, auth, publish, st
 ## Browser sessions instead of API keys (experimental)
 
 Instagram, TikTok and YouTube (Shorts as a variant) are driven through **your own logged-in browser profile**
-(`platforms/browser.py`, Playwright). There is no Meta app, TikTok developer app or Google OAuth client.
+(`platforms/browser.py`, Playwright). `setup.sh` (and `make update`) installs the browser and FFmpeg automatically. There is no Meta app, TikTok developer app or Google OAuth client.
 
 ```bash
-pip install -e '.[browser]' && playwright install chromium
 python -m app.cli login instagram      # visible window: sign in by hand, then close it
 python -m app.cli session-status       # which platforms are still signed in
 ```

@@ -67,7 +67,7 @@ def test_run_command_does_not_use_a_shell(tmp_path: Path) -> None:
 
 
 def test_run_command_missing_binary_is_actionable() -> None:
-    with pytest.raises(DependencyMissingError, match="not found on PATH"):
+    with pytest.raises(DependencyMissingError, match="is missing"):
         run_command(["definitely-not-a-real-binary-xyz"])
 
 

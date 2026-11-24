@@ -204,9 +204,8 @@ class MediaService:
         ffprobe_ok = check_binary(self.config.pipeline.ffmpeg.ffprobe_binary) is not None
         if pending and not ffprobe_ok:
             result.warnings.append(
-                "ffprobe was not found, so metadata was not extracted. Install FFmpeg "
-                "(macOS: brew install ffmpeg, Debian/Ubuntu: sudo apt install ffmpeg) "
-                "and scan again."
+                "ffprobe was not found, so metadata was not extracted. Re-run the installer "
+                "(setup.sh) or `make update` to install it, then scan again."
             )
         for asset in pending:
             if is_cancelled():

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import platform
 import re
 import shutil
 import stat
@@ -90,11 +89,7 @@ def _tool_version(binary: str, args: list[str]) -> tuple[str | None, str | None]
 
 def run_checks() -> list[Check]:
     checks: list[Check] = []
-    install_hint = (
-        "brew install {0}"
-        if platform.system() == "Darwin"
-        else "sudo apt install {0}  (or your distro's package manager)"
-    )
+    install_hint = "Re-run the installer (setup.sh) or `make update`; it installs {0} for you."
 
     v = sys.version_info
     checks.append(

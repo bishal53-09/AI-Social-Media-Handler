@@ -38,6 +38,10 @@ _SECRET_PATTERNS = [
 REDACTED = "***REDACTED***"
 
 
+def _missing_program(name: str) -> str:
+    return f"A required program ('{name}') is missing. Re-run the installer (setup.sh) or `make update` to install it."
+
+
 def redact(text: str, extra_values: Sequence[str] = ()) -> str:
     """Remove secrets from ``text``.
 
@@ -110,7 +114,7 @@ def run_command(
     exe = argv[0] if os.path.isabs(argv[0]) else which(argv[0])
     if exe is None:
         raise DependencyMissingError(
-            f"Required program '{argv[0]}' was not found on PATH.",
+            _missing_program(argv[0]),
             details={"program": argv[0]},
         )
     argv[0] = exe
@@ -167,7 +171,8 @@ def run_command_streaming(
     exe = argv[0] if os.path.isabs(argv[0]) else which(argv[0])
     if exe is None:
         raise DependencyMissingError(
-            f"Required program '{argv[0]}' was not found on PATH.", details={"program": argv[0]}
+            _missing_program(argv[0]),
+            details={"program": argv[0]},
         )
     argv[0] = exe
 
