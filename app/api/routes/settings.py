@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import logging
+import threading
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.api.deps import ConfigDep, SettingsDep
+from app.core.exceptions import ConflictError, UnsupportedOperationError
 from app.core.security import redact
 from app.pipeline.ffmpeg import check_binary
 from platforms.browser import profile_root
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
@@ -85,4 +89,65 @@ def read_settings(settings: SettingsDep, config: ConfigDep) -> SettingsRead:
         pipeline_stages=[s.model_dump() for s in config.pipeline.stages],
         platforms=platforms,
         export_presets=sorted(config.export_presets),
+    )
+
+
+class SessionCheck(BaseModel):
+    signed_in: bool
+
+
+class LoginStarted(BaseModel):
+    started: bool = True
+    message: str
+
+
+#: Platforms with a visible login window open. A browser profile can only be used by one browser at a time.
+_login_open: set[str] = set()
+_lock = threading.Lock()
+
+
+def _browser_adapter(name: str, config: ConfigDep) -> Any:
+    from platforms.browser import BrowserAdapter
+    from platforms.registry import create_adapter
+
+    adapter = create_adapter(name, config.platforms.platforms.get(name))
+    if not isinstance(adapter, BrowserAdapter):
+        raise UnsupportedOperationError(f"{adapter.display_name} does not use a browser session.")
+    return adapter
+
+
+@router.post("/platforms/{name}/session/check", response_model=SessionCheck)
+def check_session(name: str, config: ConfigDep) -> SessionCheck:
+    """Open the platform headlessly with the saved profile and report whether it is signed in."""
+    adapter = _browser_adapter(name, config)
+    if name in _login_open:
+        raise ConflictError("A login window is open; finish signing in and close it first.")
+    with _lock:
+        _login_open.add(name)  # the profile is single-user: block a login while checking
+        try:
+            return SessionCheck(signed_in=adapter.is_signed_in())
+        finally:
+            _login_open.discard(name)
+
+
+@router.post("/platforms/{name}/session/login", response_model=LoginStarted, status_code=202)
+def start_login(name: str, config: ConfigDep) -> LoginStarted:
+    """Open a visible browser window for the user to sign in by hand. Nothing automates that window."""
+    adapter = _browser_adapter(name, config)
+    with _lock:
+        if name in _login_open:
+            raise ConflictError("A login window is already open.")
+        _login_open.add(name)
+
+    def run() -> None:
+        try:
+            adapter.authenticate()
+        except Exception:
+            log.exception("Login window for %s failed", name)  # no display, browser missing, etc.
+        finally:
+            _login_open.discard(name)
+
+    threading.Thread(target=run, daemon=True).start()
+    return LoginStarted(
+        message="A browser window is opening on the machine running the app. Sign in, close it, then check again."
     )

@@ -83,3 +83,15 @@ def test_missing_like_control_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> N
     _fake(monkeypatch, page)
     with pytest.raises(PlatformError, match="could not find the like"):
         create_adapter("youtube").like_post(Credentials(platform="youtube"), "https://www.youtube.com/watch?v=x")
+
+
+def test_settings_session_check_and_login_endpoints(client, monkeypatch: pytest.MonkeyPatch) -> None:  # type: ignore[no-untyped-def]
+    page = MagicMock()
+    page.locator.return_value.count.return_value = 1  # signed out
+    _fake(monkeypatch, page)
+    base = "/api/v1/settings/platforms"
+    assert client.post(f"{base}/youtube/session/check").json() == {"signed_in": False}
+    page.locator.return_value.count.return_value = 0
+    assert client.post(f"{base}/youtube/session/check").json() == {"signed_in": True}
+    assert client.post(f"{base}/nope/session/check").status_code == 404
+    assert client.post(f"{base}/youtube/session/login").status_code == 202

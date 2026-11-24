@@ -115,6 +115,10 @@ const post = <T>(path: string, body?: unknown) =>
 export const api = {
   health: () => request<Health>("/health"),
   settings: () => request<AppSettings>("/settings"),
+  checkSession: (platform: string) =>
+    post<{ signed_in: boolean }>(`/settings/platforms/${encodeURIComponent(platform)}/session/check`),
+  startLogin: (platform: string) =>
+    post<{ message: string }>(`/settings/platforms/${encodeURIComponent(platform)}/session/login`),
   updateStatus: (refresh = false) =>
     request<UpdateStatus>(`/system/update${refresh ? "?refresh=true" : ""}`),
   projects: {

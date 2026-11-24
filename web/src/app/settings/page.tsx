@@ -30,6 +30,40 @@ const Yes = ({ ok }: { ok: boolean }) =>
     <X className="inline size-4 text-destructive" aria-label="no" />
   );
 
+function PlatformSessionRow({ p }: { p: { name: string; session_saved: boolean; publishing_implemented: boolean } }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const check = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { signed_in } = await api.checkSession(p.name);
+      if (signed_in) {
+        setMsg("Signed in.");
+      } else {
+        const { message } = await api.startLogin(p.name);
+        setMsg(`Signed out. ${message}`);
+      }
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Check failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Row label={p.name}>
+      <span className="mr-2">
+        login {p.session_saved ? "saved" : "missing"} ·{" "}
+        {p.publishing_implemented ? "can publish (experimental)" : "cannot publish yet"}
+      </span>
+      <Button size="sm" variant="outline" disabled={busy} onClick={check}>
+        {busy ? "Checking…" : "Check login"}
+      </Button>
+      {msg ? <p className="mt-1 text-muted-foreground">{msg}</p> : null}
+    </Row>
+  );
+}
+
 function UpdatesCard() {
   const initial = useApi(() => api.updateStatus(), []);
   const [fresh, setFresh] = useState<UpdateStatus | null>(null);
@@ -215,11 +249,7 @@ export default function SettingsPage() {
                   <Yes ok={s.require_publish_approval} />
                 </Row>
                 {s.platforms.map((p) => (
-                  <Row key={p.name} label={p.name}>
-                    {p.enabled ? "enabled" : "disabled"} · login{" "}
-                    {p.session_saved ? "saved" : `missing (run asmh login ${p.name})`} ·{" "}
-                    {p.publishing_implemented ? "can publish (experimental)" : "cannot publish yet"}
-                  </Row>
+                  <PlatformSessionRow key={p.name} p={p} />
                 ))}
               </dl>
             </CardContent>
