@@ -17,34 +17,47 @@ case "$(uname -s)" in
 esac
 say "Detected $OS"
 
-# --- system prerequisites: install whatever is missing, ask for a password only if needed ---
+# --- system prerequisites: check each one first, install only what is missing ---
 SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO="sudo"
+# The platform's own package manager: Homebrew on macOS; apt, dnf, pacman or zypper on Linux.
 PM=""
-for m in brew apt-get dnf pacman zypper; do command -v "$m" >/dev/null 2>&1 && { PM="$m"; break; }; done
+if [ "$OS" = macos ]; then
+  command -v brew >/dev/null 2>&1 && PM=brew
+else
+  for m in apt-get dnf pacman zypper; do command -v "$m" >/dev/null 2>&1 && { PM="$m"; break; }; done
+fi
+APT_UPDATED=0
 
-# pkg_install <brew-pkg> <apt-pkg> <dnf-pkg> <pacman-pkg> <zypper-pkg>
+# pkg_install <brew> <apt> <dnf> <pacman> <zypper>: one package name per package manager.
 pkg_install() {
   case "$PM" in
     brew) brew install "$1" ;;
-    apt-get) $SUDO apt-get update -qq && $SUDO apt-get install -y "$2" ;;
+    apt-get)
+      if [ "$APT_UPDATED" -eq 0 ]; then $SUDO apt-get update && APT_UPDATED=1; fi
+      $SUDO apt-get install -y "$2" ;;
     dnf) $SUDO dnf install -y "$3" ;;
     pacman) $SUDO pacman -S --noconfirm "$4" ;;
-    zypper) $SUDO zypper install -y "$5" ;;
+    zypper) $SUDO zypper --non-interactive install "$5" ;;
     *) return 1 ;;
   esac
 }
-ensure() { # ensure <command> <label> <pkgs...>
+# ensure <command> <label> <brew> <apt> <dnf> <pacman> <zypper>
+ensure() {
   local cmd="$1" label="$2"; shift 2
-  command -v "$cmd" >/dev/null 2>&1 && return 0
-  say "Installing $label"
+  if command -v "$cmd" >/dev/null 2>&1; then echo "  ✓ $label already installed"; return 0; fi
+  if [ -z "$PM" ]; then
+    echo "  ✗ $label is missing and no supported package manager was found (macOS needs Homebrew: https://brew.sh)"; missing=1; return 0
+  fi
+  say "Installing $label with $PM"
   pkg_install "$@" || true
-  command -v "$cmd" >/dev/null 2>&1 || { echo "  could not install $label automatically"; missing=1; }
+  command -v "$cmd" >/dev/null 2>&1 || { echo "  ✗ could not install $label"; missing=1; }
 }
 
+say "Checking required software"
 missing=0
 ensure git git git git git git git
-ensure ffmpeg "FFmpeg" ffmpeg ffmpeg ffmpeg ffmpeg ffmpeg
-ensure ffprobe "FFmpeg" ffmpeg ffmpeg ffmpeg ffmpeg ffmpeg
+ensure ffmpeg FFmpeg ffmpeg ffmpeg ffmpeg ffmpeg ffmpeg
+ensure ffprobe "FFmpeg (ffprobe)" ffmpeg ffmpeg ffmpeg ffmpeg ffmpeg
 ensure npm "Node.js" node nodejs npm nodejs npm nodejs npm
 
 find_python() {
@@ -53,15 +66,17 @@ find_python() {
   done
 }
 PYTHON="$(find_python)"
-if [ -z "$PYTHON" ]; then
-  say "Installing Python"
+if [ -n "$PYTHON" ]; then
+  echo "  ✓ Python already installed ($PYTHON)"
+elif [ -n "$PM" ]; then
+  say "Installing Python with $PM"
   pkg_install python@3.12 python3 python3 python python3 || true
   PYTHON="$(find_python)"
 fi
-[ -n "$PYTHON" ] || { echo "  could not install Python 3.11+ automatically"; missing=1; }
+[ -n "$PYTHON" ] || { echo "  ✗ Python 3.11+ is missing and could not be installed"; missing=1; }
 # Debian/Ubuntu ship venv separately.
 if [ -n "$PYTHON" ] && ! "$PYTHON" -c 'import venv, ensurepip' >/dev/null 2>&1 && [ "$PM" = apt-get ]; then
-  say "Installing Python venv support"
+  say "Installing Python venv support with apt"
   $SUDO apt-get install -y python3-venv || true
 fi
 if command -v node >/dev/null 2>&1 && ! node -e 'process.exit(parseInt(process.versions.node) >= 20 ? 0 : 1)'; then
@@ -88,10 +103,24 @@ say "Python environment"
 .venv/bin/python -m pip install --quiet --upgrade pip
 .venv/bin/python -m pip install --quiet -e ".[dev]"
 
-say "Browser for connecting your accounts (one-time download)"
-.venv/bin/python -m playwright install chromium
-# Linux needs a few system libraries for the browser; best effort, never fatal.
-[ "$OS" = linux ] && { $SUDO .venv/bin/python -m playwright install-deps chromium >/dev/null 2>&1 || echo "  (could not install browser system libraries; if the browser fails to start, re-run this installer with sudo access)"; }
+say "Browser for connecting your accounts"
+if .venv/bin/python - <<'PY'
+import os, sys
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    sys.exit(0 if os.path.exists(p.chromium.executable_path) else 1)
+PY
+then
+  echo "  ✓ Chromium already installed"
+else
+  echo "  Downloading Chromium (one time)"
+  .venv/bin/python -m playwright install chromium
+  # Linux needs a few system libraries for the browser; installed with the system package manager. Never fatal.
+  if [ "$OS" = linux ]; then
+    $SUDO .venv/bin/python -m playwright install-deps chromium >/dev/null 2>&1 \
+      || echo "  (could not install the browser's system libraries; if the browser fails to start, re-run this installer)"
+  fi
+fi
 
 say "Frontend dependencies"
 (cd web && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi)

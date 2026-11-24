@@ -45,9 +45,20 @@ say "Python dependencies"
 "$PY" -m pip install --quiet -e ".[dev]"
 
 say "Browser for connecting your accounts"
-"$PY" -m playwright install chromium
-command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 \
-  || echo "  FFmpeg is missing: re-run setup.sh (it installs it for you)."
+if "$PY" - <<'PY'
+import os, sys
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    sys.exit(0 if os.path.exists(p.chromium.executable_path) else 1)
+PY
+then
+  echo "  ✓ Chromium already installed"
+else
+  "$PY" -m playwright install chromium
+fi
+for tool in ffmpeg ffprobe; do
+  command -v "$tool" >/dev/null 2>&1 || echo "  $tool is missing: re-run setup.sh (it installs it for you)."
+done
 
 say "Frontend dependencies"
 (cd web && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi)
