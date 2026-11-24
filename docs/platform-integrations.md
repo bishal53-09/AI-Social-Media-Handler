@@ -1,14 +1,34 @@
 # Platform integrations
 
 Contract: `platforms/base.py` (capabilities, media validation, auth, publish, status/reconcile, analytics).
-Instagram, TikTok and YouTube (Shorts as a variant) implement **media validation and metadata only**; auth, publish and
-analytics raise `UnsupportedOperationError`. Facebook, LinkedIn and X have README stubs. Add a platform by copying
-`platforms/_template/`.
+
+## Browser sessions instead of API keys (experimental)
+
+Instagram, TikTok and YouTube (Shorts as a variant) are driven through **your own logged-in browser profile**
+(`platforms/browser.py`, Playwright). There is no Meta app, TikTok developer app or Google OAuth client.
+
+```bash
+pip install -e '.[browser]' && playwright install chromium
+python -m app.cli login instagram      # visible window: sign in by hand, then close it
+python -m app.cli session-status       # which platforms are still signed in
+```
+
+Set `handle` for Instagram and TikTok in `config/platforms.yaml` (used to find a freshly published post). Cookies live in
+`BROWSER_PROFILE_DIR` (default `~/.asmh/browser-profiles`), outside the repo; passwords are never seen by this code.
+`POST /posts/{id}/publish` publishes an approved, queued post. Posts are identified by their URL.
+
+Covered per platform (all `experimental`, none verified against the live sites yet): publish, public-count analytics
+(likes/comments/plays/views), list comments, reply, like post; Instagram also likes comments. Hide/delete comments,
+reach/impressions and private insights are `unavailable`.
+
+Risks, plainly: automating these sites can breach their terms and get the account restricted (Instagram and TikTok
+detect automation; likes and comments are the riskiest); selectors break whenever a site changes its markup, and then
+the call fails loudly instead of returning fake data; Google may refuse sign-in inside an automated browser. YouTube's
+official Data API would be more reliable, and could be swapped in behind the same adapter.
 
 Publishing rules (enforced by `PostService`): draft → approved → queued → uploading → processing → published; also
 failed, unknown, cancelled. An idempotency key is stored before upload; an `unknown` post can only be resolved by
-reconciling with the platform, never by blind retry. Instagram will need publicly reachable media URLs (object storage;
-`app/storage/object_storage.py` is an interface only).
+reconciling with the platform, never by blind retry.
 
 ## Engagement: comments, interactions and analytics
 
@@ -18,20 +38,16 @@ The app is a manager, not only a poster. The adapter contract (`platforms/base.p
 
 | State | Meaning |
 |---|---|
-| `implemented` | Real, tested adapter code exists. **No capability is implemented yet on any platform.** |
-| `planned` | The platform's official API appears to allow it; the adapter does not do it yet. |
-| `unavailable` | The official API does not offer it (or only to restricted programs). |
-
-The `planned`/`unavailable` declarations are our best reading of the platform docs and **must be re-verified against
-current documentation and quotas when implementing**: YouTube (list/reply/moderate/delete comments, like a video,
-no comment likes), Instagram (list/reply/hide/delete comments, no likes), TikTok (basic statistics only; comment
-management needs restricted programs).
+| `implemented` | Real adapter code verified against the live platform. **None yet.** |
+| `experimental` | Browser-session code exists but has not been verified against the live site. |
+| `planned` | Possible, but not built. |
+| `unavailable` | Not supported for this platform. |
 
 Behaviour guarantees (tested with a fake adapter): sync stores comments and a metric snapshot per sync (history kept);
 comments removed on the platform are flagged, not silently dropped; every interaction attempted is written to an audit
 trail (`engagement_actions`) with errors redacted; unsupported operations fail with `501` *before* anything is sent;
-unexpected platform failures surface as `502 platform_error`. With the shipped adapters a sync reports "not implemented"
+unexpected platform failures surface as `502 platform_error`. If the browser is unavailable or signed out, a sync reports the error
 and shows no data; nothing is simulated.
 
-Credentials for engagement calls come from a resolver (`EngagementService(credentials_for=...)`); until OAuth is
-implemented the default resolver supplies identity only, no tokens.
+Browser adapters need no tokens: the default credentials resolver supplies identity only and the session lives in the
+browser profile.

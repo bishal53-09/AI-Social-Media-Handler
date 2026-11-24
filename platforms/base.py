@@ -6,7 +6,8 @@ talks to ``PlatformAdapter`` only.
 
 Honesty rule: operations an adapter cannot perform raise
 ``UnsupportedOperationError`` with a clear message. They never pretend to
-succeed. In this milestone **no adapter can publish**.
+succeed. Browser-driven capabilities are reported as ``experimental`` until they have
+been verified against the live site.
 """
 
 from __future__ import annotations
@@ -149,6 +150,9 @@ class CapabilityState(StrEnum):
     PLANNED = "planned"
     #: The platform's official API does not offer it (or only to restricted programs).
     UNAVAILABLE = "unavailable"
+    #: Browser-automation code exists but has not been verified against the live site;
+    #: it works only while the site's markup matches what the code expects.
+    EXPERIMENTAL = "experimental"
 
 
 @dataclass
@@ -234,6 +238,8 @@ class PlatformAdapter(ABC):
     api_capabilities: ClassVar[frozenset[Capability]] = frozenset()
     #: Capabilities with real, tested adapter code. Nothing sets this yet.
     implemented_capabilities: ClassVar[frozenset[Capability]] = frozenset()
+    #: Capabilities driven through a logged-in browser session (see ``platforms.browser``).
+    experimental_capabilities: ClassVar[frozenset[Capability]] = frozenset()
     engagement_notes: ClassVar[str] = ""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
@@ -245,6 +251,8 @@ class PlatformAdapter(ABC):
     def capability_state(cls, capability: Capability) -> CapabilityState:
         if capability in cls.implemented_capabilities:
             return CapabilityState.IMPLEMENTED
+        if capability in cls.experimental_capabilities:
+            return CapabilityState.EXPERIMENTAL
         if capability in cls.api_capabilities:
             return CapabilityState.PLANNED
         return CapabilityState.UNAVAILABLE
@@ -256,12 +264,10 @@ class PlatformAdapter(ABC):
     def require(self, capability: Capability) -> None:
         """Raise a precise error unless this adapter can really perform ``capability``."""
         state = self.capability_state(capability)
-        if state is CapabilityState.IMPLEMENTED:
+        if state in (CapabilityState.IMPLEMENTED, CapabilityState.EXPERIMENTAL):
             return
         reason = (
-            "is not offered by the platform's official API"
-            if state is CapabilityState.UNAVAILABLE
-            else "is not implemented yet"
+            "is not supported for this platform" if state is CapabilityState.UNAVAILABLE else "is not implemented yet"
         )
         raise UnsupportedOperationError(
             f"{self.display_name}: {capability.value} {reason}.",
@@ -289,9 +295,7 @@ class PlatformAdapter(ABC):
 
     def _unsupported(self, operation: str) -> UnsupportedOperationError:
         return UnsupportedOperationError(
-            f"{self.display_name}: {operation}() is not implemented yet. "
-            "Publishing requires the official platform API integration (see "
-            f"platforms/{self.name}/README.md).",
+            f"{self.display_name}: {operation}() is not implemented yet. See platforms/{self.name}/README.md).",
             details={"platform": self.name, "operation": operation},
         )
 

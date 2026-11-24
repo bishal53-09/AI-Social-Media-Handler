@@ -216,9 +216,9 @@ export default function SettingsPage() {
                 </Row>
                 {s.platforms.map((p) => (
                   <Row key={p.name} label={p.name}>
-                    {p.enabled ? "enabled" : "disabled"} · credentials{" "}
-                    {p.credentials_configured ? "set" : "missing"} ·{" "}
-                    {p.publishing_implemented ? "can publish" : "cannot publish yet"}
+                    {p.enabled ? "enabled" : "disabled"} · login{" "}
+                    {p.session_saved ? "saved" : `missing (run asmh login ${p.name})`} ·{" "}
+                    {p.publishing_implemented ? "can publish (experimental)" : "cannot publish yet"}
                   </Row>
                 ))}
               </dl>

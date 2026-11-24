@@ -251,3 +251,58 @@ def test_error_text_is_redacted(svc: PostService) -> None:
     a = svc.begin_attempt(p.id)
     svc.fail_attempt(p.id, a, "401 Bearer abcdefghijklmnop rejected", definitive=True)
     assert "abcdefghijklmnop" not in (svc.get(p.id).error or "")
+
+
+# --- publish_now through an adapter --------------------------------------------
+
+
+def _adapter(result=None, error=None):  # type: ignore[no-untyped-def]
+    from platforms.base import Capability, PlatformAdapter
+
+    class A(PlatformAdapter):
+        name, display_name = "youtube", "YouTube"
+        experimental_capabilities = frozenset({Capability.PUBLISH})
+
+        def publish(self, credentials, request):  # type: ignore[no-untyped-def]
+            if error:
+                raise error
+            return result
+
+    return A()
+
+
+def test_publish_now_records_success(svc: PostService) -> None:
+    from pathlib import Path
+
+    from platforms.base import PublishResult
+
+    p = queued(svc)
+    out = svc.publish_now(p.id, _adapter(PublishResult("published", "https://y/1", "https://y/1")), Path("a.mp4"))
+    assert out.status == "published" and out.external_post_id == "https://y/1"
+    assert svc.attempts(p.id)[0].outcome == "success"
+
+
+def test_publish_now_without_a_url_goes_to_processing_for_reconciliation(svc: PostService) -> None:
+    from pathlib import Path
+
+    from platforms.base import PublishResult
+
+    p = queued(svc)
+    assert svc.publish_now(p.id, _adapter(PublishResult("processing")), Path("a.mp4")).status == "processing"
+
+
+def test_publish_now_refused_error_is_retryable_but_crash_is_unknown(svc: PostService) -> None:
+    from pathlib import Path
+
+    from app.core.exceptions import PlatformError
+
+    p = queued(svc)
+    with pytest.raises(PlatformError, match="not signed in"):
+        svc.publish_now(p.id, _adapter(error=PlatformError("not signed in")), Path("a.mp4"))
+    assert svc.get(p.id).status == "failed"
+    svc.queue(p.id)
+    with pytest.raises(PlatformError, match="outcome unknown"):
+        svc.publish_now(p.id, _adapter(error=RuntimeError("browser died")), Path("a.mp4"))
+    assert svc.get(p.id).status == "unknown"
+    with pytest.raises(InvalidStateTransitionError):
+        svc.queue(p.id)  # must reconcile first

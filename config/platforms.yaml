@@ -1,6 +1,6 @@
-# Platform integration settings. Credentials come from .env, never this file.
-# "enabled" only controls whether the adapter is offered in the UI; publishing
-# itself is not implemented yet in any adapter (see docs/platform-integrations.md).
+# Platform integration settings. No API keys: adapters drive the websites through your own
+# logged-in browser profile (`asmh login <platform>`). Experimental; see docs/platform-integrations.md.
+# "enabled" only controls whether the adapter is offered in the UI.
 publishing:
   # Human approval is required before any post can be queued. Do not disable
   # unless you have built your own review step.
@@ -9,8 +9,8 @@ publishing:
 platforms:
   instagram:
     enabled: true
-    api: Meta Graph API
-    env: [META_APP_ID, META_APP_SECRET]
+    api: Browser session (instagram.com)
+    handle: ""  # your @handle, used to find a freshly published post
     media:
       reels:
         max_duration_seconds: 900
@@ -20,8 +20,8 @@ platforms:
         containers: [mp4, mov]
   tiktok:
     enabled: true
-    api: TikTok Content Posting API
-    env: [TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET]
+    api: Browser session (tiktok.com)
+    handle: ""  # your @handle without the @
     media:
       video:
         max_duration_seconds: 600
@@ -31,8 +31,7 @@ platforms:
         containers: [mp4, mov, webm]
   youtube:
     enabled: true
-    api: YouTube Data API v3
-    env: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET]
+    api: Browser session (youtube.com)
     media:
       video:
         max_duration_seconds: 43200

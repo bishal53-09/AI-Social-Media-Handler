@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.api.deps import ConfigDep, SettingsDep
 from app.core.security import redact
 from app.pipeline.ffmpeg import check_binary
+from platforms.browser import profile_root
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -16,7 +17,8 @@ class PlatformInfo(BaseModel):
     name: str
     enabled: bool
     api: str | None = None
-    credentials_configured: bool
+    #: A browser profile with a saved login exists (not proof it is still signed in).
+    session_saved: bool
     publishing_implemented: bool
     capabilities: dict[str, str] = {}
     engagement_notes: str = ""
@@ -53,15 +55,16 @@ def read_settings(settings: SettingsDep, config: ConfigDep) -> SettingsRead:
     platforms = []
     for name, cfg in plat_cfg.items():
         adapter_cls = registry.get(name)
-        cred_key = {"instagram": "meta", "tiktok": "tiktok", "youtube": "google"}.get(name)
+        caps = adapter_cls.capability_map() if adapter_cls else {}
+        profile = profile_root() / name
         platforms.append(
             PlatformInfo(
                 name=name,
                 enabled=bool(cfg.get("enabled")),
                 api=cfg.get("api"),
-                credentials_configured=bool(cred_key and secrets.get(cred_key)),
-                publishing_implemented=bool(adapter_cls and adapter_cls.publishing_implemented),
-                capabilities=adapter_cls.capability_map() if adapter_cls else {},
+                session_saved=profile.is_dir() and any(profile.iterdir()),
+                publishing_implemented=caps.get("publish") in ("implemented", "experimental"),
+                capabilities=caps,
                 engagement_notes=adapter_cls.engagement_notes if adapter_cls else "",
             )
         )

@@ -191,23 +191,17 @@ def test_real_adapters_report_not_implemented_and_invent_nothing(client: TestCli
     yt = _pid(post, "youtube")
     _publish(client, yt, "yt-123")
     report = client.post(f"{V1}/posts/{yt}/sync").json()
-    assert report["comments"]["status"] == "unsupported" and "not implemented" in report["comments"]["message"]
-    assert report["analytics"]["status"] == "unsupported"
+    assert report["comments"]["status"] == "error" and "disabled in tests" in report["comments"]["message"]
+    assert report["analytics"]["status"] == "error"
     assert client.get(f"{V1}/posts/{yt}/comments").json() == {"items": [], "total": 0}
     detail = client.get(f"{V1}/content-posts/{post['id']}").json()
     ytd = next(p for p in detail["platform_posts"] if p["platform"] == "youtube")
     assert ytd["metrics"] == {} and ytd["snapshots"] == []
-    assert ytd["capabilities"]["list_comments"] == "planned"
+    assert ytd["capabilities"]["list_comments"] == "experimental"
     assert ytd["capabilities"]["like_comment"] == "unavailable"
-    assert "videos.rate" in ytd["engagement_notes"]
-    for path, method in [
-        (f"{V1}/posts/{yt}/like", "post"),
-    ]:
-        r = getattr(client, method)(path)
-        assert r.status_code == 501
+    assert "browser session" in ytd["engagement_notes"]
+    assert client.post(f"{V1}/posts/{yt}/like").status_code == 503  # browser unavailable: refused, not faked
     assert client.get(f"{V1}/posts/{yt}/comments").json()["total"] == 0
-    # nothing was attempted, so there is nothing in the audit trail
-    assert ytd["actions"] == []
 
 
 def test_unavailable_capability_message_differs_from_planned(client: TestClient) -> None:
@@ -360,8 +354,10 @@ def test_analytics_overview(client: TestClient) -> None:
 
 def test_settings_lists_platform_capabilities(client: TestClient) -> None:
     platforms = {p["name"]: p for p in client.get(f"{V1}/settings").json()["platforms"]}
-    assert platforms["tiktok"]["capabilities"]["list_comments"] == "unavailable"
-    assert platforms["instagram"]["capabilities"]["reply_comment"] == "planned"
+    assert platforms["tiktok"]["capabilities"]["like_comment"] == "unavailable"
+    assert platforms["tiktok"]["capabilities"]["list_comments"] == "experimental"
+    assert platforms["instagram"]["capabilities"]["reply_comment"] == "experimental"
+    assert platforms["instagram"]["capabilities"]["hide_comment"] == "unavailable"
     assert all(v != "implemented" for p in platforms.values() for v in p["capabilities"].values())
 
 

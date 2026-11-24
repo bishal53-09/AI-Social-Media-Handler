@@ -63,8 +63,8 @@ def test_settings_endpoint_never_exposes_secrets(settings: Settings, config: App
     assert body["ai_key_configured"] is True and body["localhost_only"] is True
     assert body["require_publish_approval"] is True and body["ai_frame_upload_allowed"] is False
     plat = {p["name"]: p for p in body["platforms"]}
-    assert plat["youtube"]["credentials_configured"] is True
-    assert all(p["publishing_implemented"] is False for p in body["platforms"])
+    assert plat["youtube"]["session_saved"] is False  # no browser profile in the test environment
+    assert plat["youtube"]["capabilities"]["publish"] == "experimental"
     stages = {s["name"]: s["implemented"] for s in body["pipeline_stages"]}
     assert stages["proxies"] is True and stages["reframing"] is False
 

@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from app.core.config import load_app_config
-from app.core.exceptions import NotFoundError, UnsupportedOperationError
-from platforms.base import Credentials, PlatformAdapter, PublishRequest
+from app.core.exceptions import DependencyMissingError, NotFoundError, UnsupportedOperationError
+from platforms.base import Capability, Credentials, PlatformAdapter, PublishRequest
 from platforms.registry import create_adapter, get_registry, register
 
 
@@ -32,22 +32,32 @@ def test_registry_has_the_three_initial_platforms() -> None:
 
 
 @pytest.mark.parametrize("name", ["instagram", "tiktok", "youtube"])
-def test_no_adapter_pretends_to_publish(name: str) -> None:
-    a = create_adapter(name)
-    creds = Credentials(platform=name, access_token="secret-token")
-    assert a.publishing_implemented is False
-    req = PublishRequest(post_id="post_1", media_path=Path("a.mp4"))
-    calls = [
-        a.authenticate,
-        lambda: a.refresh_credentials(creds),
+def test_browser_capabilities_are_experimental_not_implemented(name: str) -> None:
+    caps = create_adapter(name).capability_map()
+    assert caps["publish"] == "experimental" and caps["list_comments"] == "experimental"
+    assert "implemented" not in caps.values()  # nothing is verified against the live sites
+    assert caps["hide_comment"] == "unavailable" and caps["delete_comment"] == "unavailable"
+
+
+@pytest.mark.parametrize("name", ["instagram", "tiktok", "youtube"])
+def test_without_a_browser_nothing_pretends_to_succeed(name: str, mp4: Path) -> None:
+    a = create_adapter(name, {"handle": "me"})
+    creds = Credentials(platform=name)
+    req = PublishRequest(post_id="post_1", media_path=mp4)
+    for call in (
         lambda: a.publish(creds, req),
-        lambda: a.get_post_status(creds, external_post_id="x"),
-        lambda: a.get_analytics(creds, "x"),
-    ]
-    for call in calls:
-        with pytest.raises(UnsupportedOperationError, match="not implemented yet") as exc:
+        lambda: a.get_analytics(creds, "https://x/y"),
+        lambda: a.list_comments(creds, "https://x/y"),
+        lambda: a.authenticate(),
+    ):
+        with pytest.raises(DependencyMissingError, match="disabled in tests"):
             call()
-        assert name in str(exc.value.details["platform"])
+
+
+def test_unimplemented_operation_is_refused_before_any_browser_opens() -> None:
+    a = create_adapter("tiktok")
+    with pytest.raises(UnsupportedOperationError, match="not supported"):
+        a.require(Capability.DELETE_COMMENT)
 
 
 def test_credentials_repr_never_shows_tokens() -> None:

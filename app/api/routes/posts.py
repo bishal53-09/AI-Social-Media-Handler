@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import EngagementServiceDep, PostServiceDep
+from app.api.deps import ConfigDep, EngagementServiceDep, PostServiceDep, SessionDep
+from app.models import Project
 from app.schemas.engagement import (
     CommentList,
     CommentRead,
@@ -90,3 +92,16 @@ def delete_comment(post_id: str, comment_id: str, svc: EngagementServiceDep) -> 
 @router.post("/{post_id}/like", status_code=204)
 def like_post(post_id: str, svc: EngagementServiceDep, body: LikeRequest | None = None) -> None:
     svc.like_post(post_id, like=body.like if body else True)
+
+
+@router.post("/{post_id}/publish", response_model=PostRead)
+def publish_post(post_id: str, svc: PostServiceDep, session: SessionDep, config: ConfigDep) -> PostRead:
+    """Publish an approved, queued post through its platform's browser session (experimental)."""
+    from app.core.paths import safe_join
+    from platforms.registry import create_adapter
+
+    post = svc.get(post_id)
+    project = session.get(Project, post.project_id)
+    adapter = create_adapter(post.platform, config.platforms.platforms.get(post.platform))
+    media = safe_join(Path(project.path), post.output_file)  # type: ignore[union-attr]
+    return PostRead.model_validate(svc.publish_now(post_id, adapter, media))

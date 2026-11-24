@@ -20,6 +20,17 @@ HAS_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 needs_ffmpeg = pytest.mark.skipif(not HAS_FFMPEG, reason="ffmpeg/ffprobe not installed")
 
 
+def _block_real_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test may open a real browser; tests that exercise adapters inject a fake page."""
+    from app.core.exceptions import DependencyMissingError
+    from platforms.browser import BrowserAdapter
+
+    def blocked(self: BrowserAdapter, *, headless: bool):  # type: ignore[no-untyped-def]
+        raise DependencyMissingError("Real browser disabled in tests.")
+
+    monkeypatch.setattr(BrowserAdapter, "_launch", blocked)
+
+
 @pytest.fixture(autouse=True)
 def _isolate_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[None]:
     """Never read the developer's real .env or write into the repo."""
@@ -35,6 +46,8 @@ def _isolate_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Ite
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'env.db'}")
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "env-data"))
     monkeypatch.setenv("MEDIA_ROOT", str(tmp_path / "env-projects"))
+    monkeypatch.setenv("BROWSER_PROFILE_DIR", str(tmp_path / "env-browser-profiles"))
+    _block_real_browser(monkeypatch)
     clear_config_caches()
     yield
     clear_config_caches()

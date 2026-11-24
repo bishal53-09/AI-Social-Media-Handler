@@ -47,7 +47,7 @@ def _db_session() -> Iterator[tuple[Session, Settings, AppConfig]]:
 
 
 def _fail(exc: AppError) -> typer.Exit:
-    typer.secho(f"Error: {exc.message}", fg=typer.colors.RED, err=True)
+    typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
     for key, value in exc.details.items():
         typer.echo(f"  {key}: {value}", err=True)
     return typer.Exit(1)
@@ -244,6 +244,39 @@ def doctor() -> None:
         "Everything required is in place." + (f" {len(warned)} optional item(s) need attention." if warned else ""),
         fg=typer.colors.GREEN,
     )
+
+
+@app.command()
+def login(platform: str = typer.Argument(..., help="instagram, tiktok or youtube.")) -> None:
+    """Open a browser window to sign in to a platform once; the session is reused afterwards."""
+    from platforms.registry import create_adapter
+
+    config = get_app_config()
+    adapter = create_adapter(platform, config.platforms.platforms.get(platform))
+    typer.echo(f"Sign in to {adapter.display_name} in the window, then close it. Profile: {adapter.profile_dir}")  # type: ignore[attr-defined]
+    adapter.authenticate()
+    typer.secho("Done. Check with: asmh session-status", fg=typer.colors.GREEN)
+
+
+@app.command("session-status")
+def session_status() -> None:
+    """Report whether each platform's saved browser session is still signed in."""
+    from platforms.browser import BrowserAdapter
+    from platforms.registry import create_adapter, get_registry
+
+    for name in get_registry():
+        adapter = create_adapter(name, get_app_config().platforms.platforms.get(name))
+        if not isinstance(adapter, BrowserAdapter):
+            continue
+        try:
+            ok = adapter.is_signed_in()
+        except AppError as exc:
+            typer.secho(f" ! {name:<10} {exc}", fg=typer.colors.YELLOW)
+            continue
+        typer.secho(
+            f" {'✓' if ok else '✗'} {name:<10} {'signed in' if ok else 'signed out'}",
+            fg=typer.colors.GREEN if ok else typer.colors.RED,
+        )
 
 
 # ---------------------------------------------------------------------------

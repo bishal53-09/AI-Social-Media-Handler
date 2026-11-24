@@ -111,13 +111,13 @@ export default function PublishingPage() {
                     <TableCell className="capitalize">{p.name}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{p.api ?? "–"}</TableCell>
                     <TableCell>
-                      <Badge variant={p.credentials_configured ? "success" : "outline"}>
-                        {p.credentials_configured ? "app credentials set" : "not configured"}
+                      <Badge variant={p.session_saved ? "success" : "outline"}>
+                        {p.session_saved ? "login saved" : "not signed in"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={p.publishing_implemented ? "success" : "warning"}>
-                        {p.publishing_implemented ? "implemented" : "not implemented"}
+                      <Badge variant={p.publishing_implemented ? "warning" : "outline"}>
+                        {p.publishing_implemented ? "experimental" : "not implemented"}
                       </Badge>
                     </TableCell>
                   </TableRow>

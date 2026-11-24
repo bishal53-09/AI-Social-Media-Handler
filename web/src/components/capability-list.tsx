@@ -12,11 +12,12 @@ export const CAPABILITY_LABELS: Record<CapabilityName, string> = {
   like_post: "Like the post",
 };
 
-const VARIANT = { implemented: "success", planned: "warning", unavailable: "outline" } as const;
+const VARIANT = { implemented: "success", experimental: "warning", planned: "warning", unavailable: "outline" } as const;
 const TEXT: Record<CapabilityState, string> = {
   implemented: "available",
+  experimental: "experimental (browser session)",
   planned: "planned, not built yet",
-  unavailable: "not offered by the platform API",
+  unavailable: "not supported",
 };
 
 export function CapabilityList({
@@ -44,7 +45,7 @@ export function whyDisabled(
   state: CapabilityState | undefined,
   platformName: string,
 ): string | null {
-  if (state === "implemented") return null;
+  if (state === "implemented" || state === "experimental") return null;
   if (state === "planned") return "Not implemented yet (see the roadmap).";
-  return `Not offered by ${platformName}'s official API.`;
+  return `Not supported for ${platformName}.`;
 }

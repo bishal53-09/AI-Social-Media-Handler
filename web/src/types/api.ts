@@ -196,7 +196,7 @@ export interface PlatformInfo {
   name: string;
   enabled: boolean;
   api: string | null;
-  credentials_configured: boolean;
+  session_saved: boolean;
   publishing_implemented: boolean;
   capabilities: Partial<Record<CapabilityName, CapabilityState>>;
   engagement_notes: string;
@@ -239,7 +239,7 @@ export interface UpdateStatus {
 
 // ---- Posts, engagement and analytics ---------------------------------------------------
 
-export type CapabilityState = "implemented" | "planned" | "unavailable";
+export type CapabilityState = "implemented" | "experimental" | "planned" | "unavailable";
 export type CapabilityName =
   | "publish"
   | "analytics"

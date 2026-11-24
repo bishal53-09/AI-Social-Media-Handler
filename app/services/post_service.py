@@ -14,17 +14,26 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    NotFoundError,
+    PlatformError,
+    UnsupportedOperationError,
+    ValidationFailedError,
+)
 from app.core.security import redact
 from app.database.base import utcnow
 from app.models import Post, PostAttempt, Project
 from app.publishing.state import PostStatus, require_transition
 from app.schemas.post import PostCreate
 from app.services.listing import SortOrder, apply_sort
+from platforms.base import Capability, Credentials, PlatformAdapter, PublishRequest
 
 #: Columns the platform-post list can be sorted by (``?sort=``).
 POST_SORT = {"created": Post.created_at, "status": Post.status, "platform": Post.platform}
@@ -193,6 +202,37 @@ class PostService:
         attempt.error = post.error = redact(error)[:2000]
         self.session.commit()
         return post
+
+    def publish_now(self, post_id: str, adapter: PlatformAdapter, media_path: Path) -> Post:
+        """queued → published through ``adapter``. Failures are recorded, never swallowed."""
+        post = self.get(post_id)
+        adapter.require(Capability.PUBLISH)
+        attempt = self.begin_attempt(post_id)
+        request = PublishRequest(
+            post_id=post.id,
+            media_path=media_path,
+            caption=post.caption or "",
+            hashtags=list(post.hashtags or []),
+            variant=post.variant,
+            idempotency_key=attempt.idempotency_key,
+        )
+        try:
+            result = adapter.publish(Credentials(platform=post.platform), request)
+        except UnsupportedOperationError:
+            raise
+        except AppError as exc:
+            # Rejected before anything was submitted (not signed in, bad config): safe to retry.
+            self.fail_attempt(post_id, attempt, str(exc), definitive=True)
+            raise
+        except Exception as exc:
+            self.fail_attempt(post_id, attempt, f"{type(exc).__name__}: {exc}", definitive=False)
+            raise PlatformError(f"Publishing failed; outcome unknown, reconcile before retrying: {exc}") from exc
+        if result.status == "published" and result.external_post_id:
+            return self.complete_attempt(
+                post_id, attempt, external_post_id=result.external_post_id, external_url=result.external_url
+            )
+        self.mark_processing(post_id)
+        return self.get(post_id)
 
     def reconcile(
         self,
